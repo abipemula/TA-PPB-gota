@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" fill="none">
+  <rect width="400" height="260" fill="#0f172a"/>
+  <rect x="48" y="64" width="304" height="132" rx="14" fill="#1e293b" stroke="#0ea5e9" stroke-width="4"/>
+  <circle cx="116" cy="130" r="44" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+  <circle cx="200" cy="130" r="44" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+  <circle cx="284" cy="130" r="44" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+  <circle cx="116" cy="130" r="14" fill="#0ea5e9"/>
+  <circle cx="200" cy="130" r="14" fill="#f59e0b"/>
+  <circle cx="284" cy="130" r="14" fill="#0ea5e9"/>
+  <rect x="90" y="196" width="140" height="14" rx="3" fill="#f59e0b"/>
+  <text x="200" y="45" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-weight="bold" font-size="14">GRAPHICS ACCELERATOR // PCIe x16</text>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" fill="none">
+  <rect width="400" height="260" fill="#0f172a"/>
+  <g stroke="#1e293b" stroke-width="1">
+    <path d="M0 40h400M0 80h400M0 120h400M0 160h400M0 200h400M0 240h400"/>
+    <path d="M40 0v260M80 0v260M120 0v260M160 0v260M200 0v260M240 0v260M280 0v260M320 0v260M360 0v260"/>
+  </g>
+  <rect x="120" y="50" width="160" height="160" rx="16" fill="#1e293b" stroke="#0ea5e9" stroke-width="4"/>
+  <rect x="142" y="72" width="116" height="116" rx="10" fill="#0f172a" stroke="#38bdf8" stroke-width="2.5"/>
+  <text x="200" y="125" text-anchor="middle" fill="#f8fafc" font-family="monospace" font-weight="bold" font-size="18">RYZEN / CORE</text>
+  <text x="200" y="148" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-size="12">PROCESSOR UNIT</text>
+  <path d="M150 30v20M175 30v20M200 30v20M225 30v20M250 30v20M150 210v20M175 210v20M200 210v20M225 210v20M250 210v20M100 80h20M100 105h20M100 130h20M100 155h20M100 180h20M280 80h20M280 105h20M280 130h20M280 155h20M280 180h20" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+</svg>

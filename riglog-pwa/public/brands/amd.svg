@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 56" fill="none">
+  <rect width="160" height="56" rx="8" fill="#ffffff"/>
+  <path d="M18 14h24v24l-8-8V22H26l-8-8zm0 24V24l8 8v6h6l8 8H18z" fill="#ED1C24"/>
+  <text x="52" y="36" fill="#1C274C" font-family="Arial, sans-serif" font-weight="900" font-size="24" letter-spacing="1">AMD</text>
+</svg>

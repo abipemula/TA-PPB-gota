@@ -1,0 +1,105 @@
+{
+  "info": {
+    "name": "RigLog API - Gudang & Toko Komponen PC",
+    "description": "Koleksi Postman untuk Pengujian RESTful API RigLog (Modul 1 Praktikum PPB)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Categories",
+      "item": [
+        {
+          "name": "GET All Categories",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/api/categories"
+          }
+        },
+        {
+          "name": "POST Create Category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cooling & Liquid AIO\",\n  \"aisle\": \"Lorong D - Rak 01\",\n  \"description\": \"Pendingin udara tower dan liquid cooler AIO 240/360mm\"\n}"
+            },
+            "url": "http://localhost:3000/api/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Suppliers",
+      "item": [
+        {
+          "name": "GET All Suppliers",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/api/suppliers"
+          }
+        },
+        {
+          "name": "POST Create Supplier",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PT Astrindo Senayasa\",\n  \"email\": \"sales@astrindo.co.id\",\n  \"phone\": \"021-6121333\",\n  \"address\": \"Mangga Dua Mall, Jakarta Pusat\"\n}"
+            },
+            "url": "http://localhost:3000/api/suppliers"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Products (Hardware Catalog)",
+      "item": [
+        {
+          "name": "GET All Products",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/api/products"
+          }
+        },
+        {
+          "name": "POST Create Product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"CPU-INT-14700K\",\n  \"name\": \"Intel Core i7-14700K\",\n  \"brand\": \"Intel\",\n  \"category_name\": \"Processor (CPU)\",\n  \"price\": 6750000,\n  \"stock\": 12,\n  \"min_stock\": 5,\n  \"rack_location\": \"Rak A-01-C\",\n  \"description\": \"Prosesor 20-Core (8P+12E) LGA1700 untuk gaming dan produktivitas berat.\"\n}"
+            },
+            "url": "http://localhost:3000/api/products"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Stock Logs (Mutasi Gudang)",
+      "item": [
+        {
+          "name": "GET All Stock Logs",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:3000/api/stock-logs"
+          }
+        },
+        {
+          "name": "POST Create Stock Movement (IN/OUT)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"33333333-3333-4333-8333-333333333301\",\n  \"type\": \"IN\",\n  \"quantity\": 5,\n  \"reference_no\": \"PO-2026-1199\",\n  \"operator\": \"Raka (Kepala Gudang)\",\n  \"supplier_name\": \"PT Nusantara Jaya Teknologi (NJT)\",\n  \"notes\": \"Penambahan stok prosesor AMD Ryzen 7 9800X3D\"\n}"
+            },
+            "url": "http://localhost:3000/api/stock-logs"
+          }
+        }
+      ]
+    }
+  ]
+}

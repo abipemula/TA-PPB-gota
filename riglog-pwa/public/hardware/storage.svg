@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" fill="none">
+  <rect width="400" height="260" fill="#0f172a"/>
+  <rect x="52" y="92" width="296" height="76" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="4"/>
+  <rect x="74" y="108" width="52" height="44" rx="4" fill="#0f172a" stroke="#c084fc" stroke-width="2.5"/>
+  <rect x="142" y="108" width="84" height="44" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+  <rect x="242" y="108" width="84" height="44" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+  <rect x="348" y="110" width="12" height="40" rx="2" fill="#f59e0b"/>
+  <text x="200" y="68" text-anchor="middle" fill="#c084fc" font-family="monospace" font-weight="bold" font-size="14">NVMe M.2 PCIe GEN4/GEN5 SOLID STATE</text>
+</svg>

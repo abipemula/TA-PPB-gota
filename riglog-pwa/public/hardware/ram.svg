@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" fill="none">
+  <rect width="400" height="260" fill="#0f172a"/>
+  <rect x="44" y="68" width="312" height="52" rx="6" fill="#1e293b" stroke="#0ea5e9" stroke-width="3.5"/>
+  <rect x="44" y="68" width="312" height="10" rx="3" fill="#38bdf8"/>
+  <rect x="64" y="86" width="28" height="22" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="104" y="86" width="28" height="22" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="144" y="86" width="28" height="22" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="228" y="86" width="28" height="22" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="268" y="86" width="28" height="22" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="308" y="86" width="28" height="22" rx="2" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="44" y="142" width="312" height="52" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="3.5"/>
+  <rect x="44" y="142" width="312" height="10" rx="3" fill="#f59e0b"/>
+  <text x="200" y="226" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="13">DDR5 DUAL-CHANNEL MEMORY KIT</text>
+</svg>

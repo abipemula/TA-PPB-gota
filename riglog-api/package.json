@@ -1,0 +1,30 @@
+{
+  "name": "riglog-api",
+  "version": "1.0.0",
+  "description": "RigLog RESTful API - Sistem Inventaris Terintegrasi untuk Pencatatan, Pemantauan Stok, dan Pengelolaan Katalog Komponen Komputer",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "riglog",
+    "inventory",
+    "pc-components",
+    "express",
+    "supabase",
+    "ppb"
+  ],
+  "author": "Praktikan PPB 2026",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
