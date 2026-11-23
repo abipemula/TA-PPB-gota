@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { ArrowRight, Cpu } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import './SplashScreen.css'
 
 export default function SplashScreen({ onFinish, duration = 2200 }) {
@@ -31,7 +31,7 @@ export default function SplashScreen({ onFinish, duration = 2200 }) {
       aria-label="RigLog Intro"
     >
       <div className="splash-chip">
-        <Cpu size={54} color="#38bdf8" />
+        <img src="/logo.jpg" alt="RigLog Logo" className="splash-logo-img" />
       </div>
       <div className="splash-brand-name">RIGLOG</div>
       <div className="splash-brand-sub">

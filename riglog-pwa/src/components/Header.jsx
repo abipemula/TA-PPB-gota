@@ -1,4 +1,4 @@
-import { Plus, Cpu } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useFavorites } from '../hooks/useFavorites'
 
 const NAV_ITEMS = [
@@ -21,7 +21,7 @@ function Header({ tab, onTab, onNavigateCreate }) {
         style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
       >
         <div className="header-logo-badge">
-          <Cpu size={20} color="#38bdf8" />
+          <img src="/logo.jpg" alt="RigLog Logo" className="brand-logo-img" />
         </div>
         <div>
           <span className="brand display">RIGLOG</span>

@@ -1,5 +1,4 @@
 import {
-  Cpu,
   Phone,
   Mail,
   MapPin,
@@ -26,7 +25,7 @@ function Footer() {
           <div className="footer-col">
             <div className="footer-brand-row">
               <div className="footer-logo-box">
-                <Cpu size={20} color="#ec1c24" />
+                <img src="/logo.jpg" alt="RigLog Logo" className="brand-logo-img" />
               </div>
               <div>
                 <div className="footer-brand-name">{brandName}</div>
