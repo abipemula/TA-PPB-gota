@@ -315,18 +315,39 @@ class HardwareService {
   async checkout(payload) {
     const res = await apiClient.post('/api/checkout', payload)
     const receipt = res?.data || res
-    if (
-      Array.isArray(memoryProductsCache) &&
-      receipt?.product_id !== undefined &&
-      receipt?.remaining_stock !== undefined
-    ) {
-      writeOfflineCache(
-        memoryProductsCache.map((p) =>
-          String(p.id) === String(receipt.product_id)
-            ? { ...p, stock: Number(receipt.remaining_stock) }
-            : p,
-        ),
-      )
+    if (Array.isArray(memoryProductsCache) && receipt) {
+      const stockUpdates = new Map()
+      if (Array.isArray(receipt.items) && receipt.items.length > 0) {
+        receipt.items.forEach((entry) => {
+          if (
+            entry?.product_id !== undefined &&
+            entry?.remaining_stock !== undefined
+          ) {
+            stockUpdates.set(
+              String(entry.product_id),
+              Number(entry.remaining_stock),
+            )
+          }
+        })
+      } else if (
+        receipt.product_id !== undefined &&
+        receipt.remaining_stock !== undefined
+      ) {
+        stockUpdates.set(
+          String(receipt.product_id),
+          Number(receipt.remaining_stock),
+        )
+      }
+
+      if (stockUpdates.size > 0) {
+        writeOfflineCache(
+          memoryProductsCache.map((p) =>
+            stockUpdates.has(String(p.id))
+              ? { ...p, stock: stockUpdates.get(String(p.id)) }
+              : p,
+          ),
+        )
+      }
     }
     return { success: true, data: receipt }
   }

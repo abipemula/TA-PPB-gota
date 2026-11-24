@@ -1,4 +1,4 @@
-import { Bookmark } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { useIsFavorited } from '../../hooks/useFavorites'
 
 export default function FavoriteButton({ itemId, onToggle }) {
@@ -17,13 +17,13 @@ export default function FavoriteButton({ itemId, onToggle }) {
       onClick={handleClick}
       disabled={loading}
       aria-label={
-        isFavorited ? 'Hapus dari Watchlist Stok' : 'Simpan ke Watchlist Stok'
+        isFavorited ? 'Hapus dari Keranjang' : 'Tambah ke Keranjang'
       }
       title={
-        isFavorited ? 'Hapus dari Watchlist Stok' : 'Simpan ke Watchlist Stok'
+        isFavorited ? 'Hapus dari Keranjang' : 'Tambah ke Keranjang'
       }
     >
-      <Bookmark
+      <ShoppingCart
         size={17}
         fill={isFavorited ? 'var(--accent)' : 'none'}
         stroke={isFavorited ? 'var(--accent)' : 'var(--steel)'}

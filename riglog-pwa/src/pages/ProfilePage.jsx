@@ -7,7 +7,7 @@ import {
   Copy,
   Check,
   Save,
-  Bookmark,
+  ShoppingCart,
   FileText,
   Camera,
   Play,
@@ -427,9 +427,9 @@ export default function ProfilePage({ isAdmin, onAuthChange, onReplaySplash }) {
 
         <div className="profile-stats">
           <div className="stat-item">
-            <Bookmark size={20} stroke="var(--accent)" />
+            <ShoppingCart size={20} stroke="var(--accent)" />
             <div className="stat-val">{favorites.length}</div>
-            <div className="stat-label">Item di Watchlist</div>
+            <div className="stat-label">Item di Keranjang</div>
           </div>
           <div className="stat-item">
             <FileText size={20} stroke="var(--steel)" />

@@ -97,4 +97,19 @@ export function useIsFavorited(productId) {
   }
 }
 
+export const removeFavorites = (productIds = []) => {
+  const idSet = new Set(productIds.map((id) => String(id)))
+  const current = readLocalFavs()
+  const next = current.filter((fav) => {
+    const favId =
+      typeof fav === 'object' && fav !== null
+        ? fav.id ?? fav.product_id ?? fav.recipe_id
+        : fav
+    return !idSet.has(String(favId))
+  })
+  writeLocalFavs(next)
+  window.dispatchEvent(new Event('riglog-favs-updated'))
+  return next
+}
+
 export { getUserIdentifier }

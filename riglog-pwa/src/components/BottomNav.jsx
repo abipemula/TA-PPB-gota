@@ -15,6 +15,7 @@ import {
   Star,
   Package,
   Shield,
+  ShoppingCart,
 } from 'lucide-react'
 import { useFavorites } from '../hooks/useFavorites'
 import settingsService, { readCachedSettings } from '../services/settingsService'
@@ -27,6 +28,7 @@ export const NAV_ICON_CATALOG = {
   ArrowLeftRight,
   ClipboardList,
   History,
+  ShoppingCart,
   BookmarkCheck,
   Heart,
   Star,
@@ -41,7 +43,7 @@ export const NAV_ICON_CATALOG = {
 export const BOTTOM_TABS = [
   { id: 'Catalog', label: 'Katalog', defaultIcon: 'Cpu' },
   { id: 'StockLogs', label: 'Stok Log', defaultIcon: 'ArrowLeftRight' },
-  { id: 'Favorites', label: 'Watchlist', defaultIcon: 'BookmarkCheck', hasBadge: true },
+  { id: 'Favorites', label: 'Keranjang', defaultIcon: 'ShoppingCart', hasBadge: true },
   { id: 'Warehouse', label: 'Gudang', defaultIcon: 'Boxes' },
   { id: 'Profile', label: 'Profil/About', defaultIcon: 'UserCheck' },
 ]
