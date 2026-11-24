@@ -406,17 +406,49 @@ export default function EditHardwarePage({
           </div>
           <div className="form-group">
             <label className="form-label">Harga (Rp) *</label>
-            <input
-              type="number"
-              min="0"
-              step="50000"
-              value={formData.price}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, price: e.target.value }))
-              }
-              className="form-input"
-              required
-            />
+            <div className="price-stepper-wrap">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData((p) => ({ ...p, price: e.target.value }))
+                }
+                className="form-input price-stepper-input"
+                required
+              />
+              <div className="price-stepper-btns">
+                <button
+                  type="button"
+                  className="price-step-btn"
+                  title="Tambah Rp 50.000"
+                  aria-label="Tambah Rp 50.000"
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      price: (Number(p.price) || 0) + 50000,
+                    }))
+                  }
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  className="price-step-btn"
+                  title="Kurangi Rp 50.000"
+                  aria-label="Kurangi Rp 50.000"
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      price: Math.max(0, (Number(p.price) || 0) - 50000),
+                    }))
+                  }
+                >
+                  ▼
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

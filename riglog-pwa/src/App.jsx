@@ -87,6 +87,13 @@ function App() {
           handleNavigate('Catalog')
         }}
         onGoProfile={() => handleNavigate('Profile')}
+        onLogoutAdmin={() => {
+          authService.logout()
+          setIsAdmin(false)
+          if (mode === 'create' || mode === 'edit') {
+            handleBackToList()
+          }
+        }}
         onNavigateCreate={() => handleNavigate('Create')}
       />
 

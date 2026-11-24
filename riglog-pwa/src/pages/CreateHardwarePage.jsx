@@ -507,17 +507,49 @@ export default function CreateHardwarePage({ onBack, onSuccess }) {
               <label htmlFor="price" className="form-label">
                 Harga Satuan (Rp) <span className="req">*</span>
               </label>
-              <input
-                id="price"
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleFormChange}
-                min="0"
-                step="50000"
-                className="form-input"
-                required
-              />
+              <div className="price-stepper-wrap">
+                <input
+                  id="price"
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleFormChange}
+                  min="0"
+                  step="1"
+                  className="form-input price-stepper-input"
+                  required
+                />
+                <div className="price-stepper-btns">
+                  <button
+                    type="button"
+                    className="price-step-btn"
+                    title="Tambah Rp 50.000"
+                    aria-label="Tambah Rp 50.000"
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        price: (Number(p.price) || 0) + 50000,
+                      }))
+                    }
+                  >
+                    ▲
+                  </button>
+                  <button
+                    type="button"
+                    className="price-step-btn"
+                    title="Kurangi Rp 50.000"
+                    aria-label="Kurangi Rp 50.000"
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        price: Math.max(0, (Number(p.price) || 0) - 50000),
+                      }))
+                    }
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
