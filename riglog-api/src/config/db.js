@@ -23,14 +23,17 @@ export const pgPool = isPostgresConfigured
     })
   : null;
 
-let initialized = false;
+let initPromise = null;
 
 /**
  * Inisialisasi otomatis tabel PostgreSQL (Neon / Supabase Postgres)
- * dan isi seed awal jika tabel masih kosong.
+ * dan isi seed awal jika tabel masih kosong. Aman untuk concurrent cold-start Vercel.
  */
 export async function ensurePostgresReady() {
-  if (!isPostgresConfigured || !pgPool || initialized) return;
+  if (!isPostgresConfigured || !pgPool) return;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
 
   await pgPool.query(`
     CREATE TABLE IF NOT EXISTS categories (
@@ -188,5 +191,10 @@ export async function ensurePostgresReady() {
     }
   }
 
-  initialized = true;
+  })().catch((err) => {
+    initPromise = null;
+    throw err;
+  });
+
+  return initPromise;
 }

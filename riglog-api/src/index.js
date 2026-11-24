@@ -19,10 +19,24 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const UPLOADS_DIR = path.resolve(__dirname, "../uploads");
-fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+if (!process.env.VERCEL) {
+  try {
+    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  } catch (err) {
+    console.warn("[RigLog API] Skip create uploads dir:", err.message);
+  }
+}
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-token"],
+  })
+);
+app.options("*", cors());
 app.use(express.json({ limit: "15mb" }));
 
 // Mencegah browser/PWA cache data API yang basi (fix bug database tidak sinkron)
@@ -33,8 +47,10 @@ app.use("/api", (req, res, next) => {
   next();
 });
 
-// Layani file gambar komponen yang tersimpan di disk lokal
-app.use("/uploads", express.static(UPLOADS_DIR));
+// Layani file gambar komponen yang tersimpan di disk lokal (non-serverless)
+if (!process.env.VERCEL) {
+  app.use("/uploads", express.static(UPLOADS_DIR));
+}
 
 // Endpoint upload gambar (memerlukan akses Admin)
 app.post("/api/upload", requireAdmin, (req, res) => {
