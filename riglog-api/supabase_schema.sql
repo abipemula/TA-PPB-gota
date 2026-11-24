@@ -1,9 +1,9 @@
 -- =========================================================================
 -- SKEMA DATABASE SUPABASE UNTUK RIGLOG (SESUAI MODUL 1 BAB II)
--- Jalankan seluruh query ini di SQL Editor Supabase lalu klik "RUN"
+-- Salin SELURUH query ini ke SQL Editor Supabase -> klik "RUN"
 -- =========================================================================
 
--- 1. Tabel Categories (Kategori Komponen PC)
+-- 1. Tabel Categories (Kategori Komponen PC & Lokasi Rak)
 create table if not exists categories (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -38,7 +38,10 @@ create table if not exists products (
   description text,
   image_url text,
   specs jsonb default '[]'::jsonb,
+  steps jsonb default '[]'::jsonb,
   is_featured boolean default false,
+  is_weekly_pick boolean default false,
+  is_bestseller boolean default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -46,7 +49,7 @@ create table if not exists products (
 -- 4. Tabel Stock Logs (Riwayat Pencatatan Stok Masuk / Keluar Gudang)
 create table if not exists stock_logs (
   id uuid primary key default gen_random_uuid(),
-  product_id uuid references products(id) on delete cascade,
+  product_id uuid references products(id) on delete set null,
   product_name text,
   sku text,
   type text not null check (type in ('IN', 'OUT', 'AUDIT')),
@@ -60,22 +63,11 @@ create table if not exists stock_logs (
   created_at timestamptz default now()
 );
 
--- 5. Tabel Favorites (Daftar Bookmark / Pantauan Stok Prioritas)
-create table if not exists favorites (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid references products(id) on delete cascade,
-  user_identifier text not null,
-  created_at timestamptz default now()
-);
-
--- 6. Tabel Reviews / Audit Notes (Catatan Kondisi & Ulasan Internal Komponen)
-create table if not exists reviews (
-  id uuid primary key default gen_random_uuid(),
-  product_id uuid references products(id) on delete cascade,
-  user_identifier text,
-  rating integer default 5,
-  comment text,
-  created_at timestamptz default now()
+-- 5. Tabel App Settings (Profil Admin, Logo Brand, Ikon Navbar, Sosmed Prodi)
+create table if not exists app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz default now()
 );
 
 -- =========================================================================
@@ -97,7 +89,7 @@ insert into suppliers (id, name, email, phone, address) values
   ('22222222-2222-4222-8222-222222222203', 'PT Alfa Artha Andhaya (AAA)', 'distribusi@aaa.co.id', '021-62301234', 'Ruko Harco Mangga Dua Blok H, Jakarta')
 on conflict (id) do nothing;
 
-insert into products (id, sku, name, brand, category_id, category_name, price, stock, min_stock, rack_location, description, image_url, specs, is_featured) values
+insert into products (id, sku, name, brand, category_id, category_name, price, stock, min_stock, rack_location, description, image_url, specs, steps, is_featured, is_weekly_pick, is_bestseller) values
   (
     '33333333-3333-4333-8333-333333333301',
     'CPU-AMD-9800X3D',
@@ -112,7 +104,8 @@ insert into products (id, sku, name, brand, category_id, category_name, price, s
     'Prosesor gaming desktop tercepat dengan teknologi 2nd Gen AMD 3D V-Cache pada arsitektur Zen 5 (Socket AM5).',
     '/hardware/cpu.svg',
     '[{"name":"Socket","quantity":"AM5 (LGA 1718)"},{"name":"Cores / Threads","quantity":"8 Cores / 16 Threads"},{"name":"Boost Clock","quantity":"Up to 5.2 GHz"},{"name":"L3 Cache","quantity":"96 MB 3D V-Cache"},{"name":"TDP","quantity":"120W"}]'::jsonb,
-    true
+    '["Cek keutuhan segel hologram distributor resmi pada kemasan.","Cocokkan nomor seri (S/N) fisik dengan label kotak.","Simpan pada Rak A-01-B dengan kelembapan terkontrol."]'::jsonb,
+    true, true, true
   ),
   (
     '33333333-3333-4333-8333-333333333302',
@@ -128,7 +121,8 @@ insert into products (id, sku, name, brand, category_id, category_name, price, s
     'Kartu grafis kelas antusias dengan 16GB GDDR6X VRAM, pendingin Axial-tech 3 kipas, dan vapor chamber untuk gaming 4K & AI.',
     '/hardware/gpu.svg',
     '[{"name":"VRAM","quantity":"16 GB GDDR6X"},{"name":"Bus Interface","quantity":"PCIe 4.0 x16 (256-bit)"},{"name":"Boost Clock","quantity":"2670 MHz (OC Mode)"},{"name":"Power Connector","quantity":"1x 16-pin 12VHPWR"},{"name":"Recommended PSU","quantity":"750W"}]'::jsonb,
-    true
+    '["Periksa segel anti-statis ESD dan kelengkapan adapter 12VHPWR.","Pastikan pelindung pin PCIe x16 terpasang lengkap."]'::jsonb,
+    true, true, true
   ),
   (
     '33333333-3333-4333-8333-333333333303',
@@ -144,7 +138,8 @@ insert into products (id, sku, name, brand, category_id, category_name, price, s
     'Motherboard ATX AM5 tangguh dengan VRM 14+2+1 Duet Rail Power System, DDR5 7600+ MHz, 3x M.2 Gen4, dan Wi-Fi 6E.',
     '/hardware/motherboard.svg',
     '[{"name":"Form Factor","quantity":"ATX (30.5 cm x 24.4 cm)"},{"name":"Chipset","quantity":"AMD B650"},{"name":"Memory Support","quantity":"4x DDR5 up to 192GB"},{"name":"M.2 Slots","quantity":"3x PCIe 4.0 x4 M.2"},{"name":"Networking","quantity":"2.5G LAN + Wi-Fi 6E"}]'::jsonb,
-    false
+    '["Inspeksi visual pelindung soket LGA1718 AM5.","Pastikan antena Wi-Fi 6E dan kabel SATA tersedia."]'::jsonb,
+    true, false, true
   ),
   (
     '33333333-3333-4333-8333-333333333304',
@@ -160,7 +155,8 @@ insert into products (id, sku, name, brand, category_id, category_name, price, s
     'Kit RAM DDR5 dual-channel dengan latensi rendah CL30, heatspreader aluminium brushed, dan dukungan profil AMD EXPO & Intel XMP 3.0.',
     '/hardware/ram.svg',
     '[{"name":"Capacity","quantity":"32 GB (2 x 16 GB)"},{"name":"Speed","quantity":"DDR5-6000 MT/s"},{"name":"CAS Latency","quantity":"CL30-38-38-96"},{"name":"Voltage","quantity":"1.35V"},{"name":"Profile","quantity":"AMD EXPO & Intel XMP 3.0"}]'::jsonb,
-    true
+    '["Verifikasi nomor seri berurutan (matched pair) pada kedua modul RAM."]'::jsonb,
+    true, true, false
   ),
   (
     '33333333-3333-4333-8333-333333333305',
@@ -176,7 +172,8 @@ insert into products (id, sku, name, brand, category_id, category_name, price, s
     'SSD NVMe M.2 flagship dengan kecepatan baca sekuensial hingga 7450 MB/s dan tulis 6900 MB/s, ideal untuk workstation dan PS5.',
     '/hardware/storage.svg',
     '[{"name":"Capacity","quantity":"2 TB (2000 GB)"},{"name":"Interface","quantity":"PCIe Gen 4.0 x4, NVMe 2.0"},{"name":"Sequential Read","quantity":"7,450 MB/s"},{"name":"Sequential Write","quantity":"6,900 MB/s"},{"name":"DRAM Cache","quantity":"2GB LPDDR4"}]'::jsonb,
-    false
+    '["Cek segel keamanan Samsung di kedua sisi kemasan."]'::jsonb,
+    false, true, true
   ),
   (
     '33333333-3333-4333-8333-333333333306',
@@ -192,7 +189,8 @@ insert into products (id, sku, name, brand, category_id, category_name, price, s
     'Power supply full modular bersertifikasi ATX 3.0 dan PCIe 5.0 dengan kabel 12VHPWR native, kapasitor 105°C, dan Zero RPM Fan Mode.',
     '/hardware/psu.svg',
     '[{"name":"Wattage","quantity":"850 Watts"},{"name":"Efficiency","quantity":"80 PLUS Gold / Cybenetics Platinum"},{"name":"Modularity","quantity":"Fully Modular"},{"name":"ATX Version","quantity":"ATX 3.0 & PCIe 5.0 Ready"},{"name":"Warranty","quantity":"7 Tahun Resmi"}]'::jsonb,
-    false
+    '["Pastikan plastik wrap vakum utuh dan kabel AC power EU Plug disertakan."]'::jsonb,
+    true, false, false
   )
 on conflict (sku) do nothing;
 

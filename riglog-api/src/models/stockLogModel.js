@@ -1,9 +1,18 @@
+import { isPostgresConfigured, pgPool, ensurePostgresReady } from "../config/db.js";
 import { supabase, isSupabaseConfigured } from "../config/supabaseClient.js";
 import { memoryStore, saveMemoryStore } from "../config/memoryStore.js";
 import { ProductModel } from "./productModel.js";
 
 export const StockLogModel = {
   async getAll() {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const { rows } = await pgPool.query(
+        "SELECT * FROM stock_logs ORDER BY created_at DESC"
+      );
+      return rows;
+    }
+
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from("stock_logs")
@@ -12,12 +21,23 @@ export const StockLogModel = {
       if (error) throw error;
       return data;
     }
+
     return [...memoryStore.stock_logs].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
   },
 
   async getById(id) {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const { rows } = await pgPool.query(
+        "SELECT * FROM stock_logs WHERE id = $1 LIMIT 1",
+        [id]
+      );
+      if (!rows[0]) throw new Error("Stock log not found");
+      return rows[0];
+    }
+
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from("stock_logs")
@@ -27,7 +47,10 @@ export const StockLogModel = {
       if (error) throw error;
       return data;
     }
-    const found = memoryStore.stock_logs.find((l) => String(l.id) === String(id));
+
+    const found = memoryStore.stock_logs.find(
+      (l) => String(l.id) === String(id)
+    );
     if (!found) throw new Error("Stock log not found");
     return found;
   },
@@ -47,7 +70,12 @@ export const StockLogModel = {
       nextStock = qty;
     }
 
-    await ProductModel.update(product.id, { stock: nextStock });
+    // Update stok produk tanpa duplikasi auto-log
+    await ProductModel.update(
+      product.id,
+      { stock: nextStock },
+      { skipStockLog: true }
+    );
 
     const logRecord = {
       product_id: product.id,
@@ -57,11 +85,36 @@ export const StockLogModel = {
       quantity: qty,
       previous_stock: prevStock,
       current_stock: nextStock,
-      reference_no: payload.reference_no || `LOG-${Date.now().toString().slice(-6)}`,
+      reference_no:
+        payload.reference_no || `LOG-${Date.now().toString().slice(-6)}`,
       operator: payload.operator || "Admin Gudang",
       supplier_name: payload.supplier_name || "Internal Gudang",
       notes: payload.notes || "",
     };
+
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const { rows } = await pgPool.query(
+        `INSERT INTO stock_logs (
+          product_id, product_name, sku, type, quantity, previous_stock,
+          current_stock, reference_no, operator, supplier_name, notes
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        [
+          logRecord.product_id,
+          logRecord.product_name,
+          logRecord.sku,
+          logRecord.type,
+          logRecord.quantity,
+          logRecord.previous_stock,
+          logRecord.current_stock,
+          logRecord.reference_no,
+          logRecord.operator,
+          logRecord.supplier_name,
+          logRecord.notes,
+        ]
+      );
+      return rows[0];
+    }
 
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
@@ -84,11 +137,18 @@ export const StockLogModel = {
   },
 
   async remove(id) {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      await pgPool.query("DELETE FROM stock_logs WHERE id = $1", [id]);
+      return { message: "Stock log deleted successfully" };
+    }
+
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("stock_logs").delete().eq("id", id);
       if (error) throw error;
       return { message: "Stock log deleted successfully" };
     }
+
     memoryStore.stock_logs = memoryStore.stock_logs.filter(
       (l) => String(l.id) !== String(id)
     );

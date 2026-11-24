@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import {
   Phone,
   Mail,
@@ -7,15 +8,32 @@ import {
   MessageCircle,
 } from 'lucide-react'
 import { SITE_CONFIG } from '../config/siteConfig'
+import settingsService, { readCachedSettings } from '../services/settingsService'
 
 /**
  * Footer — Bagian bawah penuh warna merah AGRES.ID.
- * Seluruh informasi kontak, alamat, dan tautan media sosial prodi dibaca
- * dari src/config/siteConfig.js (hanya bisa diedit lewat kode).
+ * Informasi kontak dasar dibaca dari src/config/siteConfig.js.
+ * Tautan Media Sosial disinkronkan dari /api/settings (editable di Mode Admin).
  */
 function Footer() {
-  const { brandName, tagline, description, contact, socialMedia, copyright } =
-    SITE_CONFIG
+  const { brandName, tagline, description, contact, copyright } = SITE_CONFIG
+  const [socialMedia, setSocialMedia] = useState(
+    () => readCachedSettings().socialMedia || SITE_CONFIG.socialMedia,
+  )
+
+  useEffect(() => {
+    const loadSocials = () => {
+      settingsService.getSettings().then((res) => {
+        if (res?.success && Array.isArray(res.data?.socialMedia)) {
+          setSocialMedia(res.data.socialMedia)
+        }
+      })
+    }
+    loadSocials()
+    window.addEventListener('riglog-settings-updated', loadSocials)
+    return () =>
+      window.removeEventListener('riglog-settings-updated', loadSocials)
+  }, [])
 
   return (
     <footer className="footer">
@@ -66,12 +84,12 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Kolom 3: Media Sosial Prodi */}
+          {/* Kolom 3: Media Sosial Prodi (Editable via Admin / siteConfig.js) */}
           <div className="footer-col">
             <h4 className="footer-heading">Media Sosial Prodi</h4>
             <ul className="footer-list">
               {socialMedia.map((sosmed) => (
-                <li key={sosmed.id}>
+                <li key={sosmed.id || sosmed.name}>
                   <a
                     href={sosmed.url}
                     target="_blank"
@@ -80,7 +98,7 @@ function Footer() {
                   >
                     <ExternalLink size={14} />
                     <span>
-                      {sosmed.name} ({sosmed.handle})
+                      {sosmed.name} {sosmed.handle ? `(${sosmed.handle})` : ''}
                     </span>
                   </a>
                 </li>

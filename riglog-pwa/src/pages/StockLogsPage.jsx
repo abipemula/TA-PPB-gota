@@ -4,6 +4,7 @@ import {
   ArrowUpRight,
   ClipboardCheck,
   Plus,
+  Minus,
   Search,
   Loader,
   FileSpreadsheet,
@@ -20,7 +21,7 @@ import { formatDateTime } from '../utils/helpers'
  * Memiliki list transaksi mutasi stok di mana setiap item pada list dapat diklik
  * untuk menampilkan halaman detail (StockLogDetail).
  */
-export default function StockLogsPage({ onInspectProduct }) {
+export default function StockLogsPage({ isAdmin = false, onInspectProduct }) {
   const { logs, loading, refetch } = useStockLogs()
   const { items: products, refetch: refetchProducts } = useHardware()
   const { recordMovement, loading: submitting } = useCreateStockLog()
@@ -122,17 +123,24 @@ export default function StockLogsPage({ onInspectProduct }) {
               Buku besar pergerakan inventaris barang masuk (Purchase Order), barang keluar (Penjualan/Rakitan), dan audit stok opname. Klik baris mutasi untuk melihat bukti detail.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn--primary"
-            onClick={() => setShowForm((prev) => !prev)}
-          >
-            <Plus size={16} /> {showForm ? 'Tutup Form' : 'Catat Mutasi Baru'}
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => setShowForm((prev) => !prev)}
+            >
+              {showForm ? <Minus size={16} /> : <Plus size={16} />}{' '}
+              {showForm ? 'Tutup Form' : 'Catat Mutasi Baru'}
+            </button>
+          )}
         </div>
 
         <div className="kpi-grid">
-          <div className="kpi-card">
+          <div
+            className={`kpi-card kpi-card--clickable${typeFilter === 'ALL' ? ' kpi-card--active' : ''}`}
+            onClick={() => setTypeFilter('ALL')}
+            title="Tampilkan semua riwayat mutasi"
+          >
             <div className="kpi-icon kpi-icon--blue">
               <FileSpreadsheet size={20} />
             </div>
@@ -141,7 +149,14 @@ export default function StockLogsPage({ onInspectProduct }) {
               <div className="kpi-label">Total Dokumen Mutasi</div>
             </div>
           </div>
-          <div className="kpi-card">
+          <div
+            className={`kpi-card kpi-card--clickable${typeFilter === 'IN' ? ' kpi-card--active' : ''}`}
+            onClick={() =>
+              setTypeFilter((prev) => (prev === 'IN' ? 'ALL' : 'IN'))
+            }
+            onDoubleClick={() => setTypeFilter('ALL')}
+            title="Klik untuk filter Barang Masuk (klik lagi untuk kembali ke semua)"
+          >
             <div className="kpi-icon kpi-icon--emerald">
               <ArrowDownLeft size={20} />
             </div>
@@ -150,7 +165,14 @@ export default function StockLogsPage({ onInspectProduct }) {
               <div className="kpi-label">Total Barang Masuk (IN)</div>
             </div>
           </div>
-          <div className="kpi-card">
+          <div
+            className={`kpi-card kpi-card--clickable${typeFilter === 'OUT' ? ' kpi-card--active' : ''}`}
+            onClick={() =>
+              setTypeFilter((prev) => (prev === 'OUT' ? 'ALL' : 'OUT'))
+            }
+            onDoubleClick={() => setTypeFilter('ALL')}
+            title="Klik untuk filter Barang Keluar (klik lagi untuk kembali ke semua)"
+          >
             <div className="kpi-icon kpi-icon--amber">
               <ArrowUpRight size={20} />
             </div>
@@ -332,7 +354,12 @@ export default function StockLogsPage({ onInspectProduct }) {
               key={tab.id}
               type="button"
               className={`pill${typeFilter === tab.id ? ' pill--active' : ''}`}
-              onClick={() => setTypeFilter(tab.id)}
+              onClick={() =>
+                setTypeFilter((prev) =>
+                  prev === tab.id && tab.id !== 'ALL' ? 'ALL' : tab.id,
+                )
+              }
+              onDoubleClick={() => setTypeFilter('ALL')}
             >
               {tab.label}
             </button>

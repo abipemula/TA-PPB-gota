@@ -1,8 +1,17 @@
+import { isPostgresConfigured, pgPool, ensurePostgresReady } from "../config/db.js";
 import { supabase, isSupabaseConfigured } from "../config/supabaseClient.js";
 import { memoryStore, saveMemoryStore } from "../config/memoryStore.js";
 
 export const SupplierModel = {
   async getAll() {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const { rows } = await pgPool.query(
+        "SELECT * FROM suppliers ORDER BY created_at DESC"
+      );
+      return rows;
+    }
+
     if (isSupabaseConfigured) {
       const { data, error } = await supabase.from("suppliers").select("*");
       if (error) throw error;
@@ -12,6 +21,16 @@ export const SupplierModel = {
   },
 
   async getById(id) {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const { rows } = await pgPool.query(
+        "SELECT * FROM suppliers WHERE id = $1 LIMIT 1",
+        [id]
+      );
+      if (!rows[0]) throw new Error("Supplier not found");
+      return rows[0];
+    }
+
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from("suppliers")
@@ -27,6 +46,21 @@ export const SupplierModel = {
   },
 
   async create(supplier) {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const { rows } = await pgPool.query(
+        `INSERT INTO suppliers (name, email, phone, address)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [
+          supplier.name,
+          supplier.email || "",
+          supplier.phone || "",
+          supplier.address || "",
+        ]
+      );
+      return rows[0];
+    }
+
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from("suppliers")
@@ -50,6 +84,22 @@ export const SupplierModel = {
   },
 
   async update(id, supplier) {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      const existing = await this.getById(id);
+      const { rows } = await pgPool.query(
+        `UPDATE suppliers SET name=$1, email=$2, phone=$3, address=$4 WHERE id=$5 RETURNING *`,
+        [
+          supplier.name ?? existing.name,
+          supplier.email ?? existing.email,
+          supplier.phone ?? existing.phone,
+          supplier.address ?? existing.address,
+          id,
+        ]
+      );
+      return rows[0];
+    }
+
     if (isSupabaseConfigured) {
       const { data, error } = await supabase
         .from("suppliers")
@@ -68,6 +118,12 @@ export const SupplierModel = {
   },
 
   async remove(id) {
+    if (isPostgresConfigured) {
+      await ensurePostgresReady();
+      await pgPool.query("DELETE FROM suppliers WHERE id = $1", [id]);
+      return { message: "Supplier deleted successfully" };
+    }
+
     if (isSupabaseConfigured) {
       const { error } = await supabase.from("suppliers").delete().eq("id", id);
       if (error) throw error;

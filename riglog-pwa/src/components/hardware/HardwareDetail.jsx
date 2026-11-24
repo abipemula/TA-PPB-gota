@@ -26,6 +26,7 @@ import { formatPrice, averageRating, formatDateTime } from '../../utils/helpers'
  */
 export default function HardwareDetail({
   item,
+  isAdmin = false,
   onBack,
   onEdit,
   onDelete,
@@ -203,7 +204,8 @@ export default function HardwareDetail({
         </div>
       </div>
 
-      {/* Panel Pencatatan Mutasi Stok Cepat (Terintegrasi dengan Stock Logs) */}
+      {/* Panel Pencatatan Mutasi Stok Cepat (Khusus Admin) */}
+      {isAdmin && (
       <section className="detail-section">
         <h2>
           <Package size={18} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
@@ -267,6 +269,7 @@ export default function HardwareDetail({
           </div>
         </div>
       </section>
+      )}
 
       {/* Deskripsi Komponen */}
       <section className="detail-section">

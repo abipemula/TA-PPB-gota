@@ -408,6 +408,8 @@ export default function EditHardwarePage({
             <label className="form-label">Harga (Rp) *</label>
             <input
               type="number"
+              min="0"
+              step="50000"
               value={formData.price}
               onChange={(e) =>
                 setFormData((p) => ({ ...p, price: e.target.value }))

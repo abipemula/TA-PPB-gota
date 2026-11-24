@@ -10,6 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       devOptions: { enabled: true },
       manifest: {
+        id: '/',
         name: 'RigLog — Hardware Inventory & Catalog System',
         short_name: 'RigLog',
         description:
@@ -17,25 +18,39 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#0b0f19',
-        theme_color: '#0ea5e9',
+        orientation: 'portrait',
+        background_color: '#ffffff',
+        theme_color: '#ec1c24',
         icons: [
           {
-            src: '/logo.jpg',
+            src: '/icon-192.png',
             sizes: '192x192',
-            type: 'image/jpeg',
+            type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/logo.jpg',
+            src: '/icon-512.png',
             sizes: '512x512',
-            type: 'image/jpeg',
-            purpose: 'any maskable',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,webmanifest}'],
+        navigateFallbackDenylist: [/^\/api/, /^\/uploads/],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+          },
+        ],
       },
     }),
   ],

@@ -1,44 +1,54 @@
 import axios from 'axios'
 
 // ---------------------------------------------------------------------------
-// Base URL & Supabase Key Configuration (Sesuai Modul 5 Bab VI)
-// Membaca dari environment variables (.env)
+// Konfigurasi Axios Client — Memanggil Express RESTful API Buatan Sendiri
+// (Sesuai Kriteria 1 & Modul 1: Frontend -> Express Backend -> PostgreSQL)
 // ---------------------------------------------------------------------------
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
-const SUPABASE_KEY =
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  ''
+const BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+).replace(/\/+$/, '')
 
-const IS_SUPABASE =
-  BASE_URL.includes('supabase.co') && Boolean(SUPABASE_KEY)
+const ADMIN_TOKEN_KEY = 'riglog_admin_token'
 
-if (!BASE_URL) {
-  console.warn(
-    '[api] VITE_API_BASE_URL is not set. API requests will use relative paths.',
-  )
+export const getStoredAdminToken = () => {
+  try {
+    return localStorage.getItem(ADMIN_TOKEN_KEY) || ''
+  } catch {
+    return ''
+  }
 }
 
-// ---------------------------------------------------------------------------
-// Axios instance
-// ---------------------------------------------------------------------------
+export const setStoredAdminToken = (token) => {
+  try {
+    if (token) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, token)
+    } else {
+      localStorage.removeItem(ADMIN_TOKEN_KEY)
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
 const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 8000, // 8 seconds
+  timeout: 12000,
 })
 
-// ---------------------------------------------------------------------------
-// Request interceptor — attach Supabase headers (apikey & Bearer auth)
-// ---------------------------------------------------------------------------
+// Request interceptor — sisipkan token Admin & cegah cache basi
 apiClient.interceptors.request.use(
   (config) => {
-    if (IS_SUPABASE && SUPABASE_KEY) {
-      config.headers['apikey'] = SUPABASE_KEY
-      if (!config.headers['Authorization']) {
-        config.headers['Authorization'] = `Bearer ${SUPABASE_KEY}`
+    const token = getStoredAdminToken()
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
+    if ((config.method || 'get').toLowerCase() === 'get') {
+      config.params = {
+        ...(config.params || {}),
+        _t: Date.now(),
       }
     }
     return config
@@ -46,26 +56,24 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// ---------------------------------------------------------------------------
-// Response interceptor — unwrap response and normalise errors
-// ---------------------------------------------------------------------------
+// Response interceptor — ekstrak response.data & normalisasi error
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    let message = 'Terjadi kesalahan saat menghubungi server'
+    let message = 'Terjadi kesalahan saat menghubungi server RigLog API.'
     let status = null
+    let isNetworkError = false
 
     if (error.response) {
       status = error.response.status
       message =
-        error.response.data?.message ||
-        error.response.data?.msg ||
         error.response.data?.error ||
-        error.response.data?.error_description ||
+        error.response.data?.message ||
         `Server error (${status})`
     } else if (error.request) {
+      isNetworkError = true
       message =
-        'Server API tidak terjangkau. Menampilkan data tersimpan (Offline / Local Mode).'
+        'Backend RigLog API tidak terjangkau. Pastikan server riglog-api sedang berjalan.'
     } else {
       message = error.message || message
     }
@@ -73,10 +81,10 @@ apiClient.interceptors.response.use(
     return Promise.reject({
       message,
       status,
-      code: error.response?.data?.code,
+      isNetworkError,
       raw: error.response?.data,
     })
   },
 )
 
-export { apiClient, BASE_URL, SUPABASE_KEY, IS_SUPABASE }
+export { apiClient, BASE_URL, ADMIN_TOKEN_KEY }

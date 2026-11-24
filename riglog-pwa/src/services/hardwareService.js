@@ -1,30 +1,29 @@
-import { apiClient, IS_SUPABASE } from '../config/api'
+import { apiClient } from '../config/api'
 import HARDWARE_ITEMS, {
   HARDWARE_CATEGORIES,
   HARDWARE_SUPPLIERS,
 } from '../data/hardwareData'
 
-const LOCAL_PRODUCTS_KEY = 'riglog_local_products_v1'
+const OFFLINE_PRODUCTS_CACHE = 'riglog_offline_products_cache_v2'
 
-export const readLocalProducts = () => {
+const readOfflineCache = () => {
   try {
-    const raw = localStorage.getItem(LOCAL_PRODUCTS_KEY)
+    const raw = localStorage.getItem(OFFLINE_PRODUCTS_CACHE)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      if (Array.isArray(parsed)) return parsed
     }
   } catch {
-    // fallback
+    // ignore
   }
-  localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(HARDWARE_ITEMS))
-  return [...HARDWARE_ITEMS]
+  return HARDWARE_ITEMS
 }
 
-export const writeLocalProducts = (items) => {
+const writeOfflineCache = (items) => {
   try {
-    localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(items))
+    localStorage.setItem(OFFLINE_PRODUCTS_CACHE, JSON.stringify(items))
   } catch {
-    // ignore quota error
+    // ignore quota errors
   }
 }
 
@@ -103,73 +102,55 @@ export const normalizeProduct = (item) => {
     ingredients: specsList,
     specs: specsList,
     steps: stepsList,
+    is_featured: Boolean(item.is_featured),
+    is_weekly_pick: Boolean(item.is_weekly_pick),
+    is_bestseller: Boolean(item.is_bestseller),
   }
 }
 
 class HardwareService {
+  /**
+   * Selalu ambil data terbaru dari Express API (riglog-api).
+   * Cache lokal hanya dipakai saat offline / backend tidak terjangkau.
+   */
   async getProducts(params = {}) {
     try {
-      if (IS_SUPABASE) {
-        const queryParts = ['select=*']
-        if (params.search) {
-          queryParts.push(`name=ilike.*${encodeURIComponent(params.search)}*`)
-        }
-        if (params.category && params.category !== 'All') {
-          queryParts.push(
-            `category_name=eq.${encodeURIComponent(params.category)}`,
-          )
-        }
-        queryParts.push('order=created_at.desc')
-        const data = await apiClient.get(
-          `/rest/v1/products?${queryParts.join('&')}`,
-        )
-        const list = Array.isArray(data) ? data.map(normalizeProduct) : []
-        writeLocalProducts(list)
-        return { success: true, data: list, source: 'supabase' }
-      }
-
-      // Express REST API (Modul 1: /api/products)
       const data = await apiClient.get('/api/products', { params })
       const rawList = Array.isArray(data) ? data : data?.data || []
       const list = rawList.map(normalizeProduct)
-      if (list.length > 0) writeLocalProducts(list)
+      writeOfflineCache(list)
       return { success: true, data: list, source: 'api' }
-    } catch {
-      const localList = readLocalProducts().map(normalizeProduct)
-      return {
-        success: true,
-        data: localList,
-        source: 'local',
+    } catch (err) {
+      if (err?.isNetworkError) {
+        const cached = readOfflineCache().map(normalizeProduct)
+        return {
+          success: true,
+          data: cached,
+          source: 'offline',
+          warning: err.message,
+        }
       }
+      throw err
     }
   }
 
   async getProductById(id) {
     try {
-      if (IS_SUPABASE) {
-        const data = await apiClient.get(
-          `/rest/v1/products?id=eq.${id}&select=*`,
-        )
-        if (Array.isArray(data) && data.length > 0) {
-          return { success: true, data: normalizeProduct(data[0]) }
-        }
-      } else {
-        const data = await apiClient.get(`/api/products/${id}`)
-        const item = data?.data || data
-        if (item && item.id) {
-          return { success: true, data: normalizeProduct(item) }
-        }
+      const data = await apiClient.get(`/api/products/${id}`)
+      const item = data?.data || data
+      if (item && item.id) {
+        return { success: true, data: normalizeProduct(item) }
       }
-    } catch {
-      // Fallback ke penyimpanan lokal
+      throw new Error('Komponen tidak ditemukan.')
+    } catch (err) {
+      if (err?.isNetworkError) {
+        const found = readOfflineCache().find(
+          (item) => String(item.id) === String(id),
+        )
+        if (found) return { success: true, data: normalizeProduct(found) }
+      }
+      throw err
     }
-
-    const localList = readLocalProducts()
-    const found = localList.find((item) => String(item.id) === String(id))
-    if (found) {
-      return { success: true, data: normalizeProduct(found) }
-    }
-    throw new Error('Komponen tidak ditemukan.')
   }
 
   async createProduct(data) {
@@ -181,48 +162,27 @@ class HardwareService {
 
     const categoryName = data.category_name || data.type || 'Processor (CPU)'
     const payload = {
-      sku:
-        data.sku ||
-        `HW-${Date.now().toString().slice(-5)}`,
+      sku: data.sku || `HW-${Date.now().toString().slice(-5)}`,
       name: data.name,
       brand: data.brand || 'Official Brand',
       category_name: categoryName,
       price: Number(data.price || 0),
-      stock: Number(data.stock ?? 10),
+      stock: Number(data.stock ?? 0),
       min_stock: Number(data.min_stock ?? 5),
       rack_location: data.rack_location || 'Rak A-01',
       description: data.description || '',
       specs: specsArray,
+      steps: Array.isArray(data.steps) ? data.steps : [],
       image_url: data.image_url || getCategoryIcon(categoryName),
       is_featured: Boolean(data.is_featured),
+      is_weekly_pick: Boolean(data.is_weekly_pick),
+      is_bestseller: Boolean(data.is_bestseller),
+      operator: data.operator || 'Admin Gudang',
     }
 
-    try {
-      if (IS_SUPABASE) {
-        const res = await apiClient.post('/rest/v1/products', payload, {
-          headers: { Prefer: 'return=representation' },
-        })
-        const created = Array.isArray(res) ? res[0] : res
-        return { success: true, data: normalizeProduct(created) }
-      }
-
-      const res = await apiClient.post('/api/products', payload)
-      const created = normalizeProduct(res?.data || res)
-      const currentLocal = readLocalProducts()
-      writeLocalProducts([created, ...currentLocal])
-      return { success: true, data: created }
-    } catch {
-      // Simpan ke localStorage bila API sedang tidak aktif
-      const newLocalItem = normalizeProduct({
-        id: `local-${Date.now()}`,
-        ...payload,
-        steps: data.steps || [],
-        created_at: new Date().toISOString(),
-      })
-      const current = readLocalProducts()
-      writeLocalProducts([newLocalItem, ...current])
-      return { success: true, data: newLocalItem, isLocal: true }
-    }
+    const res = await apiClient.post('/api/products', payload)
+    const created = normalizeProduct(res?.data || res)
+    return { success: true, data: created }
   }
 
   async updateProduct(id, data) {
@@ -248,60 +208,27 @@ class HardwareService {
       }),
       ...(data.description !== undefined && { description: data.description }),
       ...(specsArray !== undefined && { specs: specsArray }),
+      ...(data.steps !== undefined && { steps: data.steps }),
       ...(data.image_url !== undefined && { image_url: data.image_url }),
       ...(data.is_featured !== undefined && {
         is_featured: Boolean(data.is_featured),
       }),
+      ...(data.is_weekly_pick !== undefined && {
+        is_weekly_pick: Boolean(data.is_weekly_pick),
+      }),
+      ...(data.is_bestseller !== undefined && {
+        is_bestseller: Boolean(data.is_bestseller),
+      }),
+      ...(data.operator !== undefined && { operator: data.operator }),
     }
 
-    // Selalu sinkronkan perubahan ke cache lokal
-    const localList = readLocalProducts()
-    const idx = localList.findIndex((p) => String(p.id) === String(id))
-    if (idx !== -1) {
-      localList[idx] = normalizeProduct({
-        ...localList[idx],
-        ...payload,
-        steps: data.steps || localList[idx].steps,
-      })
-      writeLocalProducts(localList)
-    }
-
-    try {
-      if (IS_SUPABASE) {
-        const res = await apiClient.patch(
-          `/rest/v1/products?id=eq.${id}`,
-          payload,
-          { headers: { Prefer: 'return=representation' } },
-        )
-        const updated = Array.isArray(res) ? res[0] : res
-        return { success: true, data: normalizeProduct(updated) }
-      }
-      const res = await apiClient.put(`/api/products/${id}`, payload)
-      return { success: true, data: normalizeProduct(res?.data || res) }
-    } catch {
-      if (idx !== -1) {
-        return { success: true, data: localList[idx], isLocal: true }
-      }
-      throw new Error('Gagal memperbarui data komponen.')
-    }
+    const res = await apiClient.put(`/api/products/${id}`, payload)
+    return { success: true, data: normalizeProduct(res?.data || res) }
   }
 
   async deleteProduct(id) {
-    const localList = readLocalProducts().filter(
-      (p) => String(p.id) !== String(id),
-    )
-    writeLocalProducts(localList)
-
-    try {
-      if (IS_SUPABASE) {
-        await apiClient.delete(`/rest/v1/products?id=eq.${id}`)
-        return { success: true }
-      }
-      await apiClient.delete(`/api/products/${id}`)
-      return { success: true }
-    } catch {
-      return { success: true, isLocal: true }
-    }
+    await apiClient.delete(`/api/products/${id}`)
+    return { success: true }
   }
 
   async getCategories() {
@@ -322,6 +249,11 @@ class HardwareService {
     } catch {
       return HARDWARE_SUPPLIERS
     }
+  }
+
+  async createSupplier(payload) {
+    const res = await apiClient.post('/api/suppliers', payload)
+    return res?.data || res
   }
 }
 

@@ -30,14 +30,19 @@ export default function AdvancedFilter({
         />
       </div>
 
-      {/* Category Pills */}
+      {/* Category Pills (klik ulang / double click untuk uncheck ke Semua Kategori) */}
       <div className="adv-filter__pills">
         {categories.map((cat) => (
           <button
             key={cat}
             type="button"
             className={`pill${activeCategory === cat ? ' pill--active' : ''}`}
-            onClick={() => onCategory(cat)}
+            onClick={() =>
+              onCategory(
+                activeCategory === cat && cat !== 'All' ? 'All' : cat,
+              )
+            }
+            onDoubleClick={() => onCategory('All')}
           >
             {cat === 'All' ? 'Semua Kategori' : cat}
           </button>
@@ -58,14 +63,20 @@ export default function AdvancedFilter({
             <button
               type="button"
               className={`stock-chip stock-chip--warn${stockFilter === 'low' ? ' stock-chip--active' : ''}`}
-              onClick={() => onStockFilter('low')}
+              onClick={() =>
+                onStockFilter(stockFilter === 'low' ? 'all' : 'low')
+              }
+              onDoubleClick={() => onStockFilter('all')}
             >
               <AlertTriangle size={13} /> Stok Menipis
             </button>
             <button
               type="button"
               className={`stock-chip stock-chip--ok${stockFilter === 'safe' ? ' stock-chip--active' : ''}`}
-              onClick={() => onStockFilter('safe')}
+              onClick={() =>
+                onStockFilter(stockFilter === 'safe' ? 'all' : 'safe')
+              }
+              onDoubleClick={() => onStockFilter('all')}
             >
               <CheckCircle2 size={13} /> Stok Aman
             </button>

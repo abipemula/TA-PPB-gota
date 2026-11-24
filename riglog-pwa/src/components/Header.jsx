@@ -1,23 +1,14 @@
-import { Plus } from 'lucide-react'
-import { useFavorites } from '../hooks/useFavorites'
+import { Plus, ShieldCheck, Lock } from 'lucide-react'
 
-const NAV_ITEMS = [
-  { id: 'Catalog', label: 'Katalog' },
-  { id: 'StockLogs', label: 'Mutasi Stok' },
-  { id: 'Favorites', label: 'Watchlist', hasBadge: true },
-  { id: 'Warehouse', label: 'Rak & Supplier' },
-  { id: 'Profile', label: 'Profil & About' },
-]
-
-function Header({ tab, onTab, onNavigateCreate }) {
-  const { favorites } = useFavorites()
-  const favCount = favorites ? favorites.length : 0
-
+/**
+ * Header — Top bar ringkas (Navigasi 5 halaman utama dipusatkan di BottomNav bawah).
+ */
+function Header({ isAdmin, onGoHome, onGoProfile, onNavigateCreate }) {
   return (
     <header className="header">
       <div
         className="header-brand-wrap"
-        onClick={() => onTab('Catalog')}
+        onClick={onGoHome}
         style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px' }}
       >
         <div className="header-logo-badge">
@@ -29,33 +20,39 @@ function Header({ tab, onTab, onNavigateCreate }) {
         </div>
       </div>
 
-      {/* Desktop Top Nav (tetap sinkron dengan Bottom Navigation Bar) */}
-      <nav className="nav desktop-nav" aria-label="Main Navigation">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={tab === item.id ? 'nav-link active' : 'nav-link'}
-            onClick={() => onTab(item.id)}
-          >
-            {item.label}
-            {item.hasBadge && favCount > 0 && (
-              <span className="nav-badge">{favCount}</span>
-            )}
-          </button>
-        ))}
-      </nav>
-
-      {onNavigateCreate && (
+      <div className="header-right-actions">
         <button
           type="button"
-          className="btn btn--primary btn--sm header-cta"
-          onClick={onNavigateCreate}
-          title="Tambah Komponen Baru ke Katalog"
+          className={`admin-pill ${isAdmin ? 'admin-pill--active' : ''}`}
+          onClick={onGoProfile}
+          title={
+            isAdmin
+              ? 'Mode Admin Aktif — Klik untuk kelola profil/logout'
+              : 'Mode Pengunjung — Klik untuk login Admin'
+          }
         >
-          <Plus size={15} /> Komponen Baru
+          {isAdmin ? (
+            <>
+              <ShieldCheck size={14} /> Admin Aktif
+            </>
+          ) : (
+            <>
+              <Lock size={14} /> Login Admin
+            </>
+          )}
         </button>
-      )}
+
+        {isAdmin && onNavigateCreate && (
+          <button
+            type="button"
+            className="btn btn--primary btn--sm header-cta"
+            onClick={onNavigateCreate}
+            title="Tambah Komponen Baru ke Katalog"
+          >
+            <Plus size={15} /> Komponen Baru
+          </button>
+        )}
+      </div>
     </header>
   )
 }

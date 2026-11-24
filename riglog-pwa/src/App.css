@@ -296,6 +296,12 @@
   box-shadow: 0 6px 18px rgba(28, 39, 76, 0.07);
 }
 
+.kpi-card--active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 4px 14px rgba(236, 28, 36, 0.12);
+}
+
 .kpi-icon {
   width: 42px;
   height: 42px;
@@ -2086,6 +2092,105 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.brand-setting-card--selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 4px 12px rgba(236, 28, 36, 0.12);
+}
+
+.brand-action-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.brand-action-panel {
+  margin-top: 14px;
+  padding: 16px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.brand-action-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.brand-action-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bottom-nav__custom-img {
+  width: 21px;
+  height: 21px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.nav-icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: 12px;
+}
+
+.nav-icon-setting-card {
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nav-icon-setting-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-icon-preview {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.5fr;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+  .social-edit-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .brand-setting-card__name {
@@ -2122,6 +2227,104 @@
   color: var(--accent-hover);
   font-size: 0.84rem;
   font-weight: 600;
+}
+
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+  color: var(--steel);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-pill--active {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.admin-login-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-badge-banner {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+/* Floating PWA Install Button di pojok kanan bawah (di atas BottomNav) */
+.pwa-fab-install {
+  position: fixed;
+  bottom: 78px;
+  right: 16px;
+  z-index: 48;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 9999px;
+  background: #ec1c24;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(236, 28, 36, 0.38);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pwa-fab-install:hover {
+  background: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(185, 28, 28, 0.45);
+}
+
+.pwa-offline-bar {
+  position: fixed;
+  bottom: 78px;
+  left: 16px;
+  z-index: 48;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: var(--accent-soft);
+  border: 1px solid #fca5a5;
+  color: var(--accent-hover);
+  font-size: 0.78rem;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(28, 39, 76, 0.12);
 }
 
 @keyframes spin {

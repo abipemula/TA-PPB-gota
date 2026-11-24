@@ -7,6 +7,7 @@ import {
   Mail,
   ArrowRight,
   Plus,
+  Minus,
   CheckCircle2,
 } from 'lucide-react'
 import hardwareService from '../services/hardwareService'
@@ -17,7 +18,7 @@ import { formatPrice } from '../utils/helpers'
 /**
  * WarehousePage — Halaman 4: Pemantauan Zona Rak Gudang & Direktori Supplier Resmi.
  */
-export default function WarehousePage({ onSelectCategory }) {
+export default function WarehousePage({ isAdmin = false, onSelectCategory }) {
   const { items: products } = useHardware()
   const [categories, setCategories] = useState(HARDWARE_CATEGORIES)
   const [suppliers, setSuppliers] = useState(HARDWARE_SUPPLIERS)
@@ -64,22 +65,26 @@ export default function WarehousePage({ onSelectCategory }) {
     })
   }, [categories, products])
 
-  const handleAddSupplier = (e) => {
+  const handleAddSupplier = async (e) => {
     e.preventDefault()
-    if (!supplierForm.name.trim()) return
-    const newSup = {
-      id: `sup-${Date.now()}`,
-      name: supplierForm.name.trim(),
-      email: supplierForm.email.trim() || 'info@distributor.co.id',
-      phone: supplierForm.phone.trim() || '021-6000000',
-      address: supplierForm.address.trim() || 'Jakarta, Indonesia',
-      specialty: 'Mitra Pemasok Komponen Hardware',
+    if (!isAdmin || !supplierForm.name.trim()) return
+    try {
+      const created = await hardwareService.createSupplier({
+        name: supplierForm.name.trim(),
+        email: supplierForm.email.trim() || 'info@distributor.co.id',
+        phone: supplierForm.phone.trim() || '021-6000000',
+        address: supplierForm.address.trim() || 'Jakarta, Indonesia',
+      })
+      setSuppliers((prev) => [created, ...prev])
+      setSupplierForm({ name: '', email: '', phone: '', address: '' })
+      setShowAddSupplier(false)
+      setFeedback(
+        `Pemasok "${created.name}" berhasil disimpan ke database gudang!`,
+      )
+      setTimeout(() => setFeedback(''), 3500)
+    } catch (err) {
+      alert(err.message || 'Gagal menambahkan pemasok.')
     }
-    setSuppliers((prev) => [newSup, ...prev])
-    setSupplierForm({ name: '', email: '', phone: '', address: '' })
-    setShowAddSupplier(false)
-    setFeedback(`Pemasok "${newSup.name}" berhasil ditambahkan ke direktori gudang!`)
-    setTimeout(() => setFeedback(''), 3500)
   }
 
   return (
@@ -156,13 +161,16 @@ export default function WarehousePage({ onSelectCategory }) {
             />
             Direktori Distributor &amp; Pemasok Resmi
           </h2>
-          <button
-            type="button"
-            className="btn btn--outline btn--sm"
-            onClick={() => setShowAddSupplier((prev) => !prev)}
-          >
-            <Plus size={15} /> {showAddSupplier ? 'Tutup' : 'Tambah Pemasok'}
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="btn btn--outline btn--sm"
+              onClick={() => setShowAddSupplier((prev) => !prev)}
+            >
+              {showAddSupplier ? <Minus size={15} /> : <Plus size={15} />}{' '}
+              {showAddSupplier ? 'Tutup' : 'Tambah Pemasok'}
+            </button>
+          )}
         </div>
 
         {showAddSupplier && (

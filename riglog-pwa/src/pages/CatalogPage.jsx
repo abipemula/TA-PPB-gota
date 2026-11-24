@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   RefreshCw,
   Plus,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useHardware } from '../hooks/useHardware'
 import { BRAND_LOGOS } from '../config/siteConfig'
+import settingsService, { readCachedSettings } from '../services/settingsService'
 import HardwareCard from '../components/hardware/HardwareCard'
 import HardwareDetail from '../components/hardware/HardwareDetail'
 import AdvancedFilter from '../components/common/AdvancedFilter'
@@ -39,6 +40,7 @@ import {
 export default function CatalogPage({
   onNavigate,
   initialCategory = 'All',
+  isAdmin = false,
 }) {
   const { items: rawItems, loading, source, refetch } = useHardware()
   const catalogSectionRef = useRef(null)
@@ -113,15 +115,24 @@ export default function CatalogPage({
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
-  // Custom brand logos (diatur dari halaman Profil / Pengaturan)
-  const [customBrandLogos] = useState(() => {
-    try {
-      const raw = localStorage.getItem('riglog_brand_logos_v1')
-      return raw ? JSON.parse(raw) : {}
-    } catch {
-      return {}
+  // Custom brand logos (disinkronkan dari Express API /api/settings)
+  const [customBrandLogos, setCustomBrandLogos] = useState(
+    () => readCachedSettings().brandLogos || {},
+  )
+
+  useEffect(() => {
+    const loadLogos = () => {
+      settingsService.getSettings().then((res) => {
+        if (res?.success && res?.data?.brandLogos) {
+          setCustomBrandLogos(res.data.brandLogos)
+        }
+      })
     }
-  })
+    loadLogos()
+    window.addEventListener('riglog-settings-updated', loadLogos)
+    return () =>
+      window.removeEventListener('riglog-settings-updated', loadLogos)
+  }, [])
 
   const handleSelectBrand = (brandName) => {
     setActiveBrand((prev) => (prev === brandName ? 'All' : brandName))
@@ -151,15 +162,20 @@ export default function CatalogPage({
     return (
       <HardwareDetail
         item={selectedItem}
+        isAdmin={isAdmin}
         onBack={() => {
           setSelectedItem(null)
           refetch()
         }}
-        onEdit={(hw) => onNavigate && onNavigate('Edit', hw)}
-        onDelete={(hw) => {
-          setSelectedItem(null)
-          setDeleteTarget(hw)
-        }}
+        onEdit={isAdmin && onNavigate ? (hw) => onNavigate('Edit', hw) : undefined}
+        onDelete={
+          isAdmin
+            ? (hw) => {
+                setSelectedItem(null)
+                setDeleteTarget(hw)
+              }
+            : undefined
+        }
         onStockUpdated={() => refetch()}
       />
     )
@@ -171,12 +187,10 @@ export default function CatalogPage({
         <div className="masthead-top-row">
           <div>
             <span className="status-source-badge">
-              Mode Data:{' '}
-              {source === 'supabase'
-                ? 'Supabase Cloud API'
-                : source === 'api'
-                  ? 'Express RESTful API (Modul 1)'
-                  : 'Local Persistence Cache (Offline Ready)'}
+              Sumber Data:{' '}
+              {source === 'api'
+                ? 'RigLog Express API (Sinkron Live)'
+                : 'Mode Offline Cache'}
             </span>
             <h1 className="display">Katalog &amp; Inventaris Komponen PC</h1>
             <p className="lede">
@@ -332,7 +346,7 @@ export default function CatalogPage({
           </div>
           <div className="list-head-right">
             <span className="count">{filteredItems.length} komponen tampil</span>
-            {onNavigate && (
+            {isAdmin && onNavigate && (
               <button
                 type="button"
                 className="btn btn--primary btn--sm"
@@ -394,9 +408,11 @@ export default function CatalogPage({
                 item={item}
                 onSelect={setSelectedItem}
                 onEdit={
-                  onNavigate ? (hw) => onNavigate('Edit', hw) : undefined
+                  isAdmin && onNavigate
+                    ? (hw) => onNavigate('Edit', hw)
+                    : undefined
                 }
-                onDelete={setDeleteTarget}
+                onDelete={isAdmin ? setDeleteTarget : undefined}
               />
             ))}
           </ul>

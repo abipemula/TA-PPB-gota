@@ -514,6 +514,7 @@ export default function CreateHardwarePage({ onBack, onSuccess }) {
                 value={formData.price}
                 onChange={handleFormChange}
                 min="0"
+                step="50000"
                 className="form-input"
                 required
               />

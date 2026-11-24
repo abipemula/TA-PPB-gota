@@ -10,7 +10,7 @@ const DB_FILE = path.join(DATA_DIR, "local-db.json");
 
 const genId = () => crypto.randomUUID();
 
-const DEFAULT_DATA = {
+export const DEFAULT_DATA = {
   categories: [
     {
       id: "11111111-1111-4111-8111-111111111101",
@@ -320,6 +320,43 @@ const DEFAULT_DATA = {
       created_at: new Date(Date.now() - 3600000 * 12).toISOString(),
     },
   ],
+  settings: {
+    profile: {
+      username: "Raka Pratama",
+      role: "Kepala Inventaris & QC Gudang",
+      storeBranch: "RigLog Hardware Hub — Cabang Utama",
+      avatar: null,
+      bio: "Bertanggung jawab atas pencatatan stok masuk/keluar, audit nomor seri (S/N), dan pengelolaan katalog komponen PC rakitan.",
+    },
+    brandLogos: {},
+    navIcons: {},
+    socialMedia: [
+      {
+        id: "instagram",
+        name: "Instagram Prodi",
+        handle: "@prodi_official",
+        url: "https://www.instagram.com/",
+      },
+      {
+        id: "youtube",
+        name: "YouTube Prodi",
+        handle: "Official Channel Prodi",
+        url: "https://www.youtube.com/",
+      },
+      {
+        id: "linkedin",
+        name: "LinkedIn Prodi",
+        handle: "Program Studi",
+        url: "https://www.linkedin.com/",
+      },
+      {
+        id: "website",
+        name: "Website Resmi Prodi",
+        handle: "portal.prodi.ac.id",
+        url: "https://www.google.com/",
+      },
+    ],
+  },
 };
 
 function loadInitialStore() {
@@ -343,6 +380,19 @@ function loadInitialStore() {
         reviews: Array.isArray(parsed.reviews)
           ? parsed.reviews
           : [...DEFAULT_DATA.reviews],
+        settings: parsed.settings
+          ? {
+              profile: {
+                ...DEFAULT_DATA.settings.profile,
+                ...(parsed.settings.profile || {}),
+              },
+              brandLogos: parsed.settings.brandLogos || {},
+              navIcons: parsed.settings.navIcons || {},
+              socialMedia: Array.isArray(parsed.settings.socialMedia)
+                ? parsed.settings.socialMedia
+                : structuredClone(DEFAULT_DATA.settings.socialMedia),
+            }
+          : structuredClone(DEFAULT_DATA.settings),
       };
     }
   } catch (err) {
@@ -380,6 +430,7 @@ export function saveMemoryStore() {
       products: memoryStore.products,
       stock_logs: memoryStore.stock_logs,
       reviews: memoryStore.reviews,
+      settings: memoryStore.settings,
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(snapshot, null, 2), "utf-8");
   } catch (err) {
