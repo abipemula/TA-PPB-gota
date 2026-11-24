@@ -6,25 +6,59 @@ import HARDWARE_ITEMS, {
 
 const OFFLINE_PRODUCTS_CACHE = 'riglog_offline_products_cache_v2'
 
-const readOfflineCache = () => {
+// In-memory cache tanpa batas kuota localStorage — agar pindah tab (Katalog <-> Watchlist)
+// langsung menampilkan gambar asli & harga terbaru dalam 0ms (realtime)
+let memoryProductsCache = null
+let inFlightProductsPromise = null
+
+const readStoredCacheOnly = () => {
   try {
     const raw = localStorage.getItem(OFFLINE_PRODUCTS_CACHE)
     if (raw) {
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
     }
   } catch {
     // ignore
   }
-  return HARDWARE_ITEMS
+  return null
+}
+
+const readOfflineCache = () => {
+  if (Array.isArray(memoryProductsCache) && memoryProductsCache.length > 0) {
+    return memoryProductsCache
+  }
+  return readStoredCacheOnly() || HARDWARE_ITEMS
 }
 
 const writeOfflineCache = (items) => {
+  if (!Array.isArray(items)) return
+  memoryProductsCache = items
   try {
     localStorage.setItem(OFFLINE_PRODUCTS_CACHE, JSON.stringify(items))
   } catch {
-    // ignore quota errors
+    // Abaikan jika gambar base64 melebihi kuota 5MB localStorage — memoryProductsCache tetap menyimpan utuh
   }
+}
+
+const filterProductsList = (list, params = {}) => {
+  let result = Array.isArray(list) ? list : []
+  if (params.category && params.category !== 'All') {
+    const cat = String(params.category).toLowerCase()
+    result = result.filter(
+      (p) => (p.category_name || p.type || '').toLowerCase() === cat,
+    )
+  }
+  if (params.search) {
+    const q = String(params.search).toLowerCase()
+    result = result.filter(
+      (p) =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q) ||
+        (p.brand || '').toLowerCase().includes(q),
+    )
+  }
+  return result
 }
 
 export const getCategoryIcon = (categoryName = '') => {
@@ -108,21 +142,52 @@ export const normalizeProduct = (item) => {
   }
 }
 
+/**
+ * Mengembalikan snapshot produk terbaru yang sudah pernah di-load dari API (in-memory / localStorage).
+ * Tidak mengembalikan data seed SVG lama agar tidak terjadi flash gambar default.
+ */
+export const getInitialProductsSnapshot = (params = {}) => {
+  const source = memoryProductsCache || readStoredCacheOnly()
+  if (!source || source.length === 0) return []
+  return filterProductsList(source.map(normalizeProduct), params)
+}
+
 class HardwareService {
   /**
    * Selalu ambil data terbaru dari Express API (riglog-api).
-   * Cache lokal hanya dipakai saat offline / backend tidak terjangkau.
+   * In-memory cache & deduplikasi dipakai agar perpindahan tab (Katalog <-> Watchlist) instan 0ms.
    */
   async getProducts(params = {}) {
+    const isUnfiltered =
+      (!params.category || params.category === 'All') && !params.search
+
     try {
-      const data = await apiClient.get('/api/products', { params })
+      let data
+      if (isUnfiltered) {
+        if (!inFlightProductsPromise) {
+          inFlightProductsPromise = apiClient
+            .get('/api/products')
+            .finally(() => {
+              inFlightProductsPromise = null
+            })
+        }
+        data = await inFlightProductsPromise
+      } else {
+        data = await apiClient.get('/api/products', { params })
+      }
+
       const rawList = Array.isArray(data) ? data : data?.data || []
       const list = rawList.map(normalizeProduct)
-      writeOfflineCache(list)
+      if (isUnfiltered) {
+        writeOfflineCache(list)
+      }
       return { success: true, data: list, source: 'api' }
     } catch (err) {
       if (err?.isNetworkError) {
-        const cached = readOfflineCache().map(normalizeProduct)
+        const cached = filterProductsList(
+          readOfflineCache().map(normalizeProduct),
+          params,
+        )
         return {
           success: true,
           data: cached,
@@ -182,6 +247,9 @@ class HardwareService {
 
     const res = await apiClient.post('/api/products', payload)
     const created = normalizeProduct(res?.data || res)
+    if (Array.isArray(memoryProductsCache)) {
+      writeOfflineCache([created, ...memoryProductsCache])
+    }
     return { success: true, data: created }
   }
 
@@ -223,12 +291,56 @@ class HardwareService {
     }
 
     const res = await apiClient.put(`/api/products/${id}`, payload)
-    return { success: true, data: normalizeProduct(res?.data || res) }
+    const updated = normalizeProduct(res?.data || res)
+    if (Array.isArray(memoryProductsCache)) {
+      writeOfflineCache(
+        memoryProductsCache.map((p) =>
+          String(p.id) === String(id) ? updated : p,
+        ),
+      )
+    }
+    return { success: true, data: updated }
   }
 
   async deleteProduct(id) {
     await apiClient.delete(`/api/products/${id}`)
+    if (Array.isArray(memoryProductsCache)) {
+      writeOfflineCache(
+        memoryProductsCache.filter((p) => String(p.id) !== String(id)),
+      )
+    }
     return { success: true }
+  }
+
+  async checkout(payload) {
+    const res = await apiClient.post('/api/checkout', payload)
+    const receipt = res?.data || res
+    if (
+      Array.isArray(memoryProductsCache) &&
+      receipt?.product_id !== undefined &&
+      receipt?.remaining_stock !== undefined
+    ) {
+      writeOfflineCache(
+        memoryProductsCache.map((p) =>
+          String(p.id) === String(receipt.product_id)
+            ? { ...p, stock: Number(receipt.remaining_stock) }
+            : p,
+        ),
+      )
+    }
+    return { success: true, data: receipt }
+  }
+
+  updateCachedStock(productId, nextStock) {
+    if (Array.isArray(memoryProductsCache)) {
+      writeOfflineCache(
+        memoryProductsCache.map((p) =>
+          String(p.id) === String(productId)
+            ? { ...p, stock: Number(nextStock) }
+            : p,
+        ),
+      )
+    }
   }
 
   async getCategories() {

@@ -17,6 +17,56 @@ const fileToDataUrl = (file) =>
     reader.readAsDataURL(file)
   })
 
+/**
+ * Kompres & resize gambar raster di sisi browser sebelum disimpan ke database
+ * agar ukuran payload sangat ringan (~40–90 KB) dan loading katalog/watchlist jauh lebih cepat.
+ */
+const compressImageToDataUrl = async (file, maxDimension = 768, quality = 0.78) => {
+  if (file.type === 'image/svg+xml') {
+    return fileToDataUrl(file)
+  }
+
+  try {
+    const rawDataUrl = await fileToDataUrl(file)
+    const img = await new Promise((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = reject
+      el.src = rawDataUrl
+    })
+
+    let { width, height } = img
+    if (width > maxDimension || height > maxDimension) {
+      if (width >= height) {
+        height = Math.round((height * maxDimension) / width)
+        width = maxDimension
+      } else {
+        width = Math.round((width * maxDimension) / height)
+        height = maxDimension
+      }
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return rawDataUrl
+
+    ctx.drawImage(img, 0, 0, width, height)
+
+    // Coba WebP dulu (ringan & mendukung transparansi), fallback ke JPEG jika browser tidak support
+    const webpUrl = canvas.toDataURL('image/webp', quality)
+    if (webpUrl.startsWith('data:image/webp') && webpUrl.length < rawDataUrl.length) {
+      return webpUrl
+    }
+
+    const jpegUrl = canvas.toDataURL('image/jpeg', quality)
+    return jpegUrl.length < rawDataUrl.length ? jpegUrl : rawDataUrl
+  } catch {
+    return fileToDataUrl(file)
+  }
+}
+
 class UploadService {
   async uploadImage(file) {
     if (!file) {
@@ -29,7 +79,7 @@ class UploadService {
       throw new Error('Ukuran gambar maksimal 5 MB.')
     }
 
-    const dataUrl = await fileToDataUrl(file)
+    const dataUrl = await compressImageToDataUrl(file)
 
     // Upload lewat Express API buatan sendiri (/api/upload)
     const res = await apiClient.post('/api/upload', {

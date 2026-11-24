@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import favoriteService from '../services/favoriteService'
 import { getUserIdentifier } from '../services/userService'
 
 const LOCAL_KEY = 'riglog_watchlist_favorites'
@@ -7,7 +6,10 @@ const LOCAL_KEY = 'riglog_watchlist_favorites'
 const readLocalFavs = () => {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed
+    }
     // Default 2 komponen prioritas agar halaman Pantauan langsung terisi contoh
     const initial = [
       '33333333-3333-4333-8333-333333333302',
@@ -30,79 +32,44 @@ const writeLocalFavs = (ids) => {
 
 export function useFavorites() {
   const [favorites, setFavorites] = useState(() => readLocalFavs())
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [isLocal, setIsLocal] = useState(true)
-  const userIdentifier = getUserIdentifier()
+  const [loading] = useState(false)
+  const [error] = useState(null)
 
-  const fetchFavorites = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await favoriteService.getFavorites(userIdentifier)
-      if (response.success) {
-        setFavorites(response.data || [])
-        setIsLocal(false)
-      } else {
-        throw new Error(response.message)
-      }
-    } catch {
-      setFavorites(readLocalFavs())
-      setIsLocal(true)
-    } finally {
-      setLoading(false)
-    }
-  }, [userIdentifier])
+  const refetch = useCallback(() => {
+    setFavorites(readLocalFavs())
+  }, [])
 
   useEffect(() => {
-    fetchFavorites()
     const handleStorageUpdate = () => setFavorites(readLocalFavs())
     window.addEventListener('riglog-favs-updated', handleStorageUpdate)
-    return () =>
+    window.addEventListener('storage', handleStorageUpdate)
+    return () => {
       window.removeEventListener('riglog-favs-updated', handleStorageUpdate)
-  }, [fetchFavorites])
+      window.removeEventListener('storage', handleStorageUpdate)
+    }
+  }, [])
 
-  return { favorites, loading, error, isLocal, refetch: fetchFavorites }
+  return { favorites, loading, error, isLocal: true, refetch }
 }
 
 export function useToggleFavorite() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const userIdentifier = getUserIdentifier()
-
   const toggleFavorite = async (productId) => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await favoriteService.toggleFavorite({
-        product_id: productId,
-        user_identifier: userIdentifier,
-      })
-      if (response.success) {
-        window.dispatchEvent(new Event('riglog-favs-updated'))
-        return response.data
-      }
-      throw new Error(response.message)
-    } catch {
-      const current = readLocalFavs()
-      const idx = current.findIndex((id) => String(id) === String(productId))
-      let isFavorited
-      if (idx === -1) {
-        current.push(productId)
-        isFavorited = true
-      } else {
-        current.splice(idx, 1)
-        isFavorited = false
-      }
-      writeLocalFavs(current)
-      window.dispatchEvent(new Event('riglog-favs-updated'))
-      return { is_favorited: isFavorited }
-    } finally {
-      setLoading(false)
+    const current = readLocalFavs()
+    const idx = current.findIndex((id) => String(id) === String(productId))
+    let isFavorited
+    if (idx === -1) {
+      current.push(productId)
+      isFavorited = true
+    } else {
+      current.splice(idx, 1)
+      isFavorited = false
     }
+    writeLocalFavs(current)
+    window.dispatchEvent(new Event('riglog-favs-updated'))
+    return { is_favorited: isFavorited }
   }
 
-  return { toggleFavorite, loading, error }
+  return { toggleFavorite, loading: false, error: null }
 }
 
 export function useIsFavorited(productId) {
@@ -119,7 +86,7 @@ export function useIsFavorited(productId) {
 
   const toggleFavorite = async () => {
     const result = await toggle(productId)
-    if (result) await refetch()
+    if (result) refetch()
     return result
   }
 

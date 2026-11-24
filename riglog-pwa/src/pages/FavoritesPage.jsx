@@ -8,6 +8,8 @@ import HardwareCard from '../components/hardware/HardwareCard'
 /**
  * FavoritesPage — Halaman 3: Watchlist / Pantauan Stok Prioritas.
  * Menampilkan komponen yang ditandai untuk restock / pengadaan prioritas.
+ * Menggunakan data live & in-memory cache dari API agar foto komponen terbaru langsung muncul realtime
+ * tanpa flash gambar ilustrasi SVG default.
  */
 export default function FavoritesPage({ onSelectHardware, onNavigateCatalog }) {
   const {
@@ -16,26 +18,34 @@ export default function FavoritesPage({ onSelectHardware, onNavigateCatalog }) {
     error: favError,
     refetch,
   } = useFavorites()
-  const { items: apiItems } = useHardware()
+  const { items: apiItems, loading: apiLoading } = useHardware()
 
   const allKnownHardware = useMemo(() => {
     const map = new Map()
-    HARDWARE_ITEMS.forEach((item, idx) => {
-      const id = item.id || `local-${idx}`
-      const enriched = { ...item, id }
-      map.set(id, enriched)
-      map.set(String(id), enriched)
-      if (item.name) map.set(item.name, enriched)
-    })
-    apiItems.forEach((item) => {
-      if (item.id !== undefined && item.id !== null) {
-        map.set(item.id, item)
-        map.set(String(item.id), item)
-      }
-      if (item.name) map.set(item.name, item)
-    })
+    // Prioritaskan data live / in-memory cache dari server agar gambar asli langsung tampil
+    if (apiItems.length > 0) {
+      apiItems.forEach((item) => {
+        if (item.id !== undefined && item.id !== null) {
+          map.set(item.id, item)
+          map.set(String(item.id), item)
+        }
+        if (item.name) map.set(item.name, item)
+      })
+      return map
+    }
+
+    // Hanya gunakan fallback statis jika fetch API sudah selesai namun hasil kosong (offline total)
+    if (!apiLoading) {
+      HARDWARE_ITEMS.forEach((item, idx) => {
+        const id = item.id || `local-${idx}`
+        const enriched = { ...item, id }
+        map.set(id, enriched)
+        map.set(String(id), enriched)
+        if (item.name) map.set(item.name, enriched)
+      })
+    }
     return map
-  }, [apiItems])
+  }, [apiItems, apiLoading])
 
   const favoriteItems = useMemo(() => {
     const resolved = []
@@ -59,14 +69,14 @@ export default function FavoritesPage({ onSelectHardware, onNavigateCatalog }) {
     return resolved
   }, [favorites, allKnownHardware])
 
-  const isLoading = favLoading && favoriteItems.length === 0
+  const isLoading = (favLoading || apiLoading) && favoriteItems.length === 0
 
   return (
     <div className="fav-page">
       <section className="masthead">
         <h1 className="display">Watchlist &amp; Pantauan Stok Prioritas</h1>
         <p className="lede">
-          Daftar komponen komputer dengan perputaran cepat (fast-moving) atau stok kritis yang ditandai untuk pengadaan ulang (Purchase Order).
+          Daftar komponen komputer favorit atau stok prioritas yang Anda tandai untuk dipantau ketersediaan dan harganya.
         </p>
       </section>
 

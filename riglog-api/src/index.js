@@ -10,6 +10,7 @@ import supplierRoutes from "./routes/supplierRoutes.js";
 import stockLogRoutes from "./routes/stockLogRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import settingsRoutes from "./routes/settingsRoutes.js";
+import checkoutRoutes from "./routes/checkoutRoutes.js";
 import { requireAdmin } from "./middleware/adminAuth.js";
 import { isPostgresConfigured, ensurePostgresReady } from "./config/db.js";
 import { isSupabaseConfigured } from "./config/supabaseClient.js";
@@ -122,6 +123,7 @@ app.get("/", (req, res) => {
       "/api/products",
       "/api/suppliers",
       "/api/stock-logs",
+      "/api/checkout",
       "/api/upload",
     ],
   });
@@ -134,6 +136,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/customers", supplierRoutes);
 app.use("/api/stock-logs", stockLogRoutes);
+app.use("/api/checkout", checkoutRoutes);
 
 if (isPostgresConfigured) {
   ensurePostgresReady()
