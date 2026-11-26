@@ -3,42 +3,34 @@ import HARDWARE_ITEMS, {
   HARDWARE_CATEGORIES,
   HARDWARE_SUPPLIERS,
 } from '../data/hardwareData'
+import {
+  getDiskCachedProducts,
+  setDiskCachedProducts,
+  enqueueOfflineOperation,
+  mergePendingQueueIntoProducts,
+} from './offlineSyncService'
 
-const OFFLINE_PRODUCTS_CACHE = 'riglog_offline_products_cache_v2'
-
-// In-memory cache tanpa batas kuota localStorage — agar pindah tab (Katalog <-> Watchlist)
-// langsung menampilkan gambar asli & harga terbaru dalam 0ms (realtime)
 let memoryProductsCache = null
 let inFlightProductsPromise = null
-
-const readStoredCacheOnly = () => {
-  try {
-    const raw = localStorage.getItem(OFFLINE_PRODUCTS_CACHE)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    }
-  } catch {
-    // ignore
-  }
-  return null
-}
 
 const readOfflineCache = () => {
   if (Array.isArray(memoryProductsCache) && memoryProductsCache.length > 0) {
     return memoryProductsCache
   }
-  return readStoredCacheOnly() || HARDWARE_ITEMS
+  return getDiskCachedProducts() || HARDWARE_ITEMS
 }
 
 const writeOfflineCache = (items) => {
   if (!Array.isArray(items)) return
   memoryProductsCache = items
-  try {
-    localStorage.setItem(OFFLINE_PRODUCTS_CACHE, JSON.stringify(items))
-  } catch {
-    // Abaikan jika gambar base64 melebihi kuota 5MB localStorage — memoryProductsCache tetap menyimpan utuh
-  }
+  setDiskCachedProducts(items)
+}
+
+export const normalizeExternalUrl = (raw = '') => {
+  const trimmed = String(raw || '').trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
 }
 
 const filterProductsList = (list, params = {}) => {
@@ -133,33 +125,45 @@ export const normalizeProduct = (item) => {
     description: item.description || '',
     image_url: item.image_url || item.image || defaultIcon,
     image: item.image_url || item.image || defaultIcon,
+    product_url: normalizeExternalUrl(item.product_url || ''),
     ingredients: specsList,
     specs: specsList,
     steps: stepsList,
     is_featured: Boolean(item.is_featured),
     is_weekly_pick: Boolean(item.is_weekly_pick),
     is_bestseller: Boolean(item.is_bestseller),
+    pendingSync: Boolean(item.pendingSync),
   }
 }
 
 /**
- * Mengembalikan snapshot produk terbaru yang sudah pernah di-load dari API (in-memory / localStorage).
- * Tidak mengembalikan data seed SVG lama agar tidak terjadi flash gambar default.
+ * Mengembalikan snapshot produk terbaru (in-memory / disk cache) DIGABUNG dengan
+ * antrean produk/stok offline yang belum sync agar tetap tampil instan 0ms dan bertahan saat refresh offline.
  */
 export const getInitialProductsSnapshot = (params = {}) => {
-  const source = memoryProductsCache || readStoredCacheOnly()
-  if (!source || source.length === 0) return []
-  return filterProductsList(source.map(normalizeProduct), params)
+  const source = memoryProductsCache || getDiskCachedProducts()
+  const baseList = source && source.length > 0 ? source : []
+  const merged = mergePendingQueueIntoProducts(baseList)
+  if (merged.length === 0) return []
+  return filterProductsList(merged.map(normalizeProduct), params)
 }
 
 class HardwareService {
-  /**
-   * Selalu ambil data terbaru dari Express API (riglog-api).
-   * In-memory cache & deduplikasi dipakai agar perpindahan tab (Katalog <-> Watchlist) instan 0ms.
-   */
   async getProducts(params = {}) {
     const isUnfiltered =
       (!params.category || params.category === 'All') && !params.search
+
+    // Jika sedang benar-benar offline, langsung kembalikan disk cache + antrean offline tanpa menunggu timeout
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const merged = mergePendingQueueIntoProducts(readOfflineCache()).map(
+        normalizeProduct,
+      )
+      return {
+        success: true,
+        data: filterProductsList(merged, params),
+        source: 'offline',
+      }
+    }
 
     try {
       let data
@@ -181,16 +185,16 @@ class HardwareService {
       if (isUnfiltered) {
         writeOfflineCache(list)
       }
-      return { success: true, data: list, source: 'api' }
+      const merged = mergePendingQueueIntoProducts(list).map(normalizeProduct)
+      return { success: true, data: merged, source: 'api' }
     } catch (err) {
       if (err?.isNetworkError) {
-        const cached = filterProductsList(
-          readOfflineCache().map(normalizeProduct),
-          params,
+        const merged = mergePendingQueueIntoProducts(readOfflineCache()).map(
+          normalizeProduct,
         )
         return {
           success: true,
-          data: cached,
+          data: filterProductsList(merged, params),
           source: 'offline',
           warning: err.message,
         }
@@ -200,6 +204,14 @@ class HardwareService {
   }
 
   async getProductById(id) {
+    // Jika produk masih berada di antrean offline (tempId), baca langsung dari snapshot lokal
+    if (String(id).startsWith('offline-prod-')) {
+      const localMatch = getInitialProductsSnapshot().find(
+        (item) => String(item.id) === String(id),
+      )
+      if (localMatch) return { success: true, data: localMatch }
+    }
+
     try {
       const data = await apiClient.get(`/api/products/${id}`)
       const item = data?.data || data
@@ -208,8 +220,8 @@ class HardwareService {
       }
       throw new Error('Komponen tidak ditemukan.')
     } catch (err) {
-      if (err?.isNetworkError) {
-        const found = readOfflineCache().find(
+      if (err?.isNetworkError || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        const found = getInitialProductsSnapshot().find(
           (item) => String(item.id) === String(id),
         )
         if (found) return { success: true, data: normalizeProduct(found) }
@@ -236,6 +248,7 @@ class HardwareService {
       min_stock: Number(data.min_stock ?? 5),
       rack_location: data.rack_location || 'Rak A-01',
       description: data.description || '',
+      product_url: normalizeExternalUrl(data.product_url || ''),
       specs: specsArray,
       steps: Array.isArray(data.steps) ? data.steps : [],
       image_url: data.image_url || getCategoryIcon(categoryName),
@@ -245,12 +258,40 @@ class HardwareService {
       operator: data.operator || 'Admin Gudang',
     }
 
-    const res = await apiClient.post('/api/products', payload)
-    const created = normalizeProduct(res?.data || res)
-    if (Array.isArray(memoryProductsCache)) {
-      writeOfflineCache([created, ...memoryProductsCache])
+    const saveToOfflineQueue = async () => {
+      const tempId = `offline-prod-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      await enqueueOfflineOperation({
+        type: 'CREATE_PRODUCT',
+        tempId,
+        payload,
+      })
+      const optimistic = normalizeProduct({
+        ...payload,
+        id: tempId,
+        pendingSync: true,
+        created_at: new Date().toISOString(),
+      })
+      return { success: true, data: optimistic, offlineQueued: true }
     }
-    return { success: true, data: created }
+
+    // Mode Offline: simpan ke cache disk (IndexedDB + localStorage) untuk auto-sync nanti
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return saveToOfflineQueue()
+    }
+
+    try {
+      const res = await apiClient.post('/api/products', payload)
+      const created = normalizeProduct(res?.data || res)
+      if (Array.isArray(memoryProductsCache)) {
+        writeOfflineCache([created, ...memoryProductsCache])
+      }
+      return { success: true, data: created, offlineQueued: false }
+    } catch (err) {
+      if (err?.isNetworkError) {
+        return saveToOfflineQueue()
+      }
+      throw err
+    }
   }
 
   async updateProduct(id, data) {
@@ -275,6 +316,9 @@ class HardwareService {
         rack_location: data.rack_location,
       }),
       ...(data.description !== undefined && { description: data.description }),
+      ...(data.product_url !== undefined && {
+        product_url: normalizeExternalUrl(data.product_url),
+      }),
       ...(specsArray !== undefined && { specs: specsArray }),
       ...(data.steps !== undefined && { steps: data.steps }),
       ...(data.image_url !== undefined && { image_url: data.image_url }),
@@ -290,16 +334,48 @@ class HardwareService {
       ...(data.operator !== undefined && { operator: data.operator }),
     }
 
-    const res = await apiClient.put(`/api/products/${id}`, payload)
-    const updated = normalizeProduct(res?.data || res)
-    if (Array.isArray(memoryProductsCache)) {
-      writeOfflineCache(
-        memoryProductsCache.map((p) =>
-          String(p.id) === String(id) ? updated : p,
-        ),
-      )
+    const queueOfflineUpdate = async () => {
+      await enqueueOfflineOperation({
+        type: 'UPDATE_PRODUCT',
+        productId: id,
+        payload,
+      })
+      const existing =
+        getInitialProductsSnapshot().find((p) => String(p.id) === String(id)) ||
+        {}
+      const optimistic = normalizeProduct({
+        ...existing,
+        ...payload,
+        id,
+        pendingSync: true,
+      })
+      return { success: true, data: optimistic, offlineQueued: true }
     }
-    return { success: true, data: updated }
+
+    if (
+      String(id).startsWith('offline-prod-') ||
+      (typeof navigator !== 'undefined' && !navigator.onLine)
+    ) {
+      return queueOfflineUpdate()
+    }
+
+    try {
+      const res = await apiClient.put(`/api/products/${id}`, payload)
+      const updated = normalizeProduct(res?.data || res)
+      if (Array.isArray(memoryProductsCache)) {
+        writeOfflineCache(
+          memoryProductsCache.map((p) =>
+            String(p.id) === String(id) ? updated : p,
+          ),
+        )
+      }
+      return { success: true, data: updated, offlineQueued: false }
+    } catch (err) {
+      if (err?.isNetworkError) {
+        return queueOfflineUpdate()
+      }
+      throw err
+    }
   }
 
   async deleteProduct(id) {

@@ -18,8 +18,8 @@ const fileToDataUrl = (file) =>
   })
 
 /**
- * Kompres & resize gambar raster di sisi browser sebelum disimpan ke database
- * agar ukuran payload sangat ringan (~40–90 KB) dan loading katalog/watchlist jauh lebih cepat.
+ * Kompres & resize gambar raster di sisi browser sebelum disimpan ke database / cache offline
+ * agar ukuran payload sangat ringan (~40–90 KB) dan loading katalog/keranjang jauh lebih cepat.
  */
 const compressImageToDataUrl = async (file, maxDimension = 768, quality = 0.78) => {
   if (file.type === 'image/svg+xml') {
@@ -54,7 +54,6 @@ const compressImageToDataUrl = async (file, maxDimension = 768, quality = 0.78) 
 
     ctx.drawImage(img, 0, 0, width, height)
 
-    // Coba WebP dulu (ringan & mendukung transparansi), fallback ke JPEG jika browser tidak support
     const webpUrl = canvas.toDataURL('image/webp', quality)
     if (webpUrl.startsWith('data:image/webp') && webpUrl.length < rawDataUrl.length) {
       return webpUrl
@@ -81,15 +80,35 @@ class UploadService {
 
     const dataUrl = await compressImageToDataUrl(file)
 
-    // Upload lewat Express API buatan sendiri (/api/upload)
-    const res = await apiClient.post('/api/upload', {
-      dataUrl,
-      filename: file.name,
-    })
-    if (res?.success && res?.data?.url) {
-      return res
+    // Mode Offline: langsung kembalikan gambar terkompresi (dataUrl) agar ikut tersimpan di cache disk
+    // dan otomatis ikut ter-upload ke PostgreSQL saat produk disinkronkan ketika kembali online.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return {
+        success: true,
+        offline: true,
+        data: { url: dataUrl, filename: file.name },
+      }
     }
-    throw new Error('Gagal mengunggah gambar ke server.')
+
+    try {
+      const res = await apiClient.post('/api/upload', {
+        dataUrl,
+        filename: file.name,
+      })
+      if (res?.success && res?.data?.url) {
+        return res
+      }
+      throw new Error('Gagal mengunggah gambar ke server.')
+    } catch (err) {
+      if (err?.isNetworkError) {
+        return {
+          success: true,
+          offline: true,
+          data: { url: dataUrl, filename: file.name },
+        }
+      }
+      throw err
+    }
   }
 }
 

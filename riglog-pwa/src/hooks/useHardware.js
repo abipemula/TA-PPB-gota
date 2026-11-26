@@ -5,8 +5,8 @@ import hardwareService, {
 
 // ---------------------------------------------------------------------------
 // useHardware — Custom hook untuk mengambil daftar komponen komputer (Modul 5)
-// Mendukung Stale-While-Revalidate (in-memory snapshot) agar gambar & harga tampil instan (0ms)
-// saat berpindah halaman (Katalog <-> Watchlist), sambil tetap sinkron dari API.
+// Mendukung Stale-While-Revalidate (in-memory + IndexedDB snapshot) agar gambar & harga
+// tampil instan (0ms), produk offline tetap tampil setelah refresh, dan otomatis refresh saat sync.
 // ---------------------------------------------------------------------------
 export function useHardware(params = {}) {
   const [items, setItems] = useState(() => getInitialProductsSnapshot(params))
@@ -14,7 +14,9 @@ export function useHardware(params = {}) {
     () => getInitialProductsSnapshot(params).length === 0,
   )
   const [error, setError] = useState(null)
-  const [source, setSource] = useState('api')
+  const [source, setSource] = useState(() =>
+    typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'api',
+  )
 
   const paramKey = JSON.stringify(params)
 
@@ -46,6 +48,29 @@ export function useHardware(params = {}) {
   useEffect(() => {
     fetchHardware()
   }, [fetchHardware])
+
+  // Otomatis perbarui UI saat IndexedDB selesai hydrasi (refresh offline) atau selesai sync ke server
+  useEffect(() => {
+    const handleLocalRefresh = () => {
+      const snap = getInitialProductsSnapshot(params)
+      if (snap.length > 0) {
+        setItems(snap)
+        setLoading(false)
+      }
+    }
+    const handleSynced = () => {
+      fetchHardware()
+    }
+    window.addEventListener('riglog-offline-hydrated', handleLocalRefresh)
+    window.addEventListener('riglog-offline-queue-changed', handleLocalRefresh)
+    window.addEventListener('riglog-offline-synced', handleSynced)
+    return () => {
+      window.removeEventListener('riglog-offline-hydrated', handleLocalRefresh)
+      window.removeEventListener('riglog-offline-queue-changed', handleLocalRefresh)
+      window.removeEventListener('riglog-offline-synced', handleSynced)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchHardware, paramKey])
 
   return { items, loading, error, source, refetch: fetchHardware }
 }

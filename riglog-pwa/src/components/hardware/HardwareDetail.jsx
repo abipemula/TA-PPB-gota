@@ -18,6 +18,8 @@ import {
   Minus,
   Plus,
   X,
+  Share2,
+  CloudOff,
 } from 'lucide-react'
 import FavoriteButton from '../common/FavoriteButton'
 import { useReviews } from '../../hooks/useReviews'
@@ -78,6 +80,15 @@ export default function HardwareDetail({
   const { recordMovement, loading: recordingStock } = useCreateStockLog()
 
   const imgSrc = item.image_url || item.image || '/hardware/cpu.svg'
+  const productUrl = (item.product_url || '').trim()
+  const marketplaceLabel = (() => {
+    const lower = productUrl.toLowerCase()
+    if (lower.includes('shopee')) return 'Shopee'
+    if (lower.includes('tokopedia') || lower.includes('tokped')) return 'Tokopedia'
+    if (lower.includes('blibli')) return 'Blibli'
+    if (lower.includes('lazada')) return 'Lazada'
+    return 'Link Eksternal Produk'
+  })()
   const category = item.category_name || item.type || 'Komponen PC'
   const brand = item.brand || 'Official Brand'
   const price = Number(item.price ?? 0)
@@ -240,6 +251,11 @@ export default function HardwareDetail({
                 <MapPin size={13} /> {item.rack_location || 'Rak A-01'}
               </span>
             )}
+            {item.pendingSync && (
+              <span className="pending-sync-pill">
+                <CloudOff size={12} /> Cache Offline (Menunggu Sync)
+              </span>
+            )}
           </div>
 
           <h1 className="display">{item.name}</h1>
@@ -300,6 +316,18 @@ export default function HardwareDetail({
               </button>
             )}
             <FavoriteButton itemId={item.id || item.name} />
+            {productUrl && (
+              <a
+                href={productUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="fav-btn product-link-btn"
+                title={`Buka produk di ${marketplaceLabel}`}
+                aria-label={`Buka produk di ${marketplaceLabel}`}
+              >
+                <Share2 size={17} />
+              </a>
+            )}
             {onEdit && (
               <button
                 type="button"

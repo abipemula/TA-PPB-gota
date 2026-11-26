@@ -1,41 +1,38 @@
 import { apiClient } from '../config/api'
 import { INITIAL_STOCK_LOGS } from '../data/hardwareData'
+import {
+  getDiskCachedLogs,
+  setDiskCachedLogs,
+  enqueueOfflineOperation,
+  mergePendingQueueIntoLogs,
+} from './offlineSyncService'
 
-const OFFLINE_LOGS_CACHE = 'riglog_offline_logs_cache_v2'
-
-const readOfflineLogs = () => {
-  try {
-    const raw = localStorage.getItem(OFFLINE_LOGS_CACHE)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
-    }
-  } catch {
-    // ignore
-  }
-  return INITIAL_STOCK_LOGS
-}
-
-const writeOfflineLogs = (logs) => {
-  try {
-    localStorage.setItem(OFFLINE_LOGS_CACHE, JSON.stringify(logs))
-  } catch {
-    // ignore quota error
-  }
-}
+const readOfflineLogs = () => getDiskCachedLogs() || INITIAL_STOCK_LOGS
 
 class StockLogService {
   async getStockLogs() {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return {
+        success: true,
+        data: mergePendingQueueIntoLogs(readOfflineLogs()),
+        source: 'offline',
+      }
+    }
+
     try {
       const data = await apiClient.get('/api/stock-logs')
       const list = Array.isArray(data) ? data : data?.data || []
-      writeOfflineLogs(list)
-      return { success: true, data: list, source: 'api' }
+      setDiskCachedLogs(list)
+      return {
+        success: true,
+        data: mergePendingQueueIntoLogs(list),
+        source: 'api',
+      }
     } catch (err) {
       if (err?.isNetworkError) {
         return {
           success: true,
-          data: readOfflineLogs(),
+          data: mergePendingQueueIntoLogs(readOfflineLogs()),
           source: 'offline',
           warning: err.message,
         }
@@ -47,14 +44,48 @@ class StockLogService {
   async createStockMovement(payload) {
     const type = (payload.type || 'IN').toUpperCase()
     const qty = Math.max(1, Number(payload.quantity || 1))
-
-    const res = await apiClient.post('/api/stock-logs', {
+    const normalizedPayload = {
       ...payload,
       type,
       quantity: qty,
-    })
-    const created = res?.data || res
-    return { success: true, data: created }
+    }
+
+    const queueOfflineMovement = async () => {
+      const tempLogId = `offline-log-${Date.now()}`
+      await enqueueOfflineOperation({
+        type: 'CREATE_STOCK_LOG',
+        tempLogId,
+        payload: normalizedPayload,
+      })
+      return {
+        success: true,
+        offlineQueued: true,
+        data: {
+          id: tempLogId,
+          ...normalizedPayload,
+          created_at: new Date().toISOString(),
+          pendingSync: true,
+        },
+      }
+    }
+
+    if (
+      String(payload.product_id || '').startsWith('offline-prod-') ||
+      (typeof navigator !== 'undefined' && !navigator.onLine)
+    ) {
+      return queueOfflineMovement()
+    }
+
+    try {
+      const res = await apiClient.post('/api/stock-logs', normalizedPayload)
+      const created = res?.data || res
+      return { success: true, data: created, offlineQueued: false }
+    } catch (err) {
+      if (err?.isNetworkError) {
+        return queueOfflineMovement()
+      }
+      throw err
+    }
   }
 }
 

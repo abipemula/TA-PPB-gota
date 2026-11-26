@@ -8,6 +8,7 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  Link2,
 } from 'lucide-react'
 import hardwareService from '../services/hardwareService'
 import uploadService from '../services/uploadService'
@@ -47,6 +48,7 @@ export default function CreateHardwarePage({ onBack, onSuccess }) {
     min_stock: 5,
     rack_location: 'Rak A-02-B',
     description: '',
+    product_url: '',
     is_featured: false,
   })
 
@@ -245,6 +247,7 @@ export default function CreateHardwarePage({ onBack, onSuccess }) {
       description:
         formData.description.trim() ||
         `Komponen ${formData.type} produksi ${formData.brand}.`,
+      product_url: (formData.product_url || '').trim(),
       image_url: uploadedImageUrl || '/hardware/cpu.svg',
       is_featured: Boolean(formData.is_featured),
       ingredients: cleanSpecs,
@@ -601,6 +604,25 @@ export default function CreateHardwarePage({ onBack, onSuccess }) {
                 required
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="product_url" className="form-label">
+              <Link2 size={13} style={{ verticalAlign: 'middle', marginRight: '5px' }} />
+              Link Produk Eksternal (Shopee / Tokopedia / Custom URL)
+            </label>
+            <input
+              id="product_url"
+              type="text"
+              name="product_url"
+              value={formData.product_url || ''}
+              onChange={handleFormChange}
+              placeholder="Contoh: https://shopee.co.id/... atau https://www.tokopedia.com/..."
+              className="form-input"
+            />
+            <span className="field-hint">
+              Opsional. Jika diisi, tombol direct link (ikon share) akan tampil otomatis di samping ikon Keranjang pada halaman detail produk (Mode Customer &amp; Admin).
+            </span>
           </div>
 
           <div className="form-group">

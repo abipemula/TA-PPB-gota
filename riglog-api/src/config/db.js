@@ -67,6 +67,7 @@ export async function ensurePostgresReady() {
       rack_location text DEFAULT 'Rak A-01',
       description text,
       image_url text,
+      product_url text DEFAULT '',
       specs jsonb DEFAULT '[]'::jsonb,
       steps jsonb DEFAULT '[]'::jsonb,
       is_featured boolean DEFAULT false,
@@ -75,6 +76,8 @@ export async function ensurePostgresReady() {
       created_at timestamptz DEFAULT now(),
       updated_at timestamptz DEFAULT now()
     );
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS product_url text DEFAULT '';
 
     CREATE TABLE IF NOT EXISTS stock_logs (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

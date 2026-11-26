@@ -1,4 +1,4 @@
-import { MapPin, AlertTriangle, CheckCircle2, Pencil, Trash2 } from 'lucide-react'
+import { MapPin, AlertTriangle, CheckCircle2, Pencil, Trash2, CloudOff } from 'lucide-react'
 import FavoriteButton from '../common/FavoriteButton'
 import { formatPrice, truncate } from '../../utils/helpers'
 
@@ -33,6 +33,11 @@ export default function HardwareCard({ item, onSelect, onEdit, onDelete }) {
             loading="lazy"
           />
           <span className="sku-badge">{item.sku || 'SKU-HW'}</span>
+          {item.pendingSync && (
+            <span className="pending-sync-badge" title="Tersimpan di cache disk, otomatis sinkron saat online">
+              <CloudOff size={11} /> Offline · Belum Sync
+            </span>
+          )}
         </div>
 
         <div className="card-body">

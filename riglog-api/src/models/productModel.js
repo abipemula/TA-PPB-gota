@@ -145,6 +145,7 @@ export const ProductModel = {
         ? payload.ingredients
         : [];
     const steps = Array.isArray(payload.steps) ? payload.steps : [];
+    const productUrl = String(payload.product_url || "").trim();
 
     let created;
 
@@ -153,9 +154,9 @@ export const ProductModel = {
       const { rows } = await pgPool.query(
         `INSERT INTO products (
           sku, name, brand, category_id, category_name, price, stock, min_stock,
-          rack_location, description, image_url, specs, steps,
+          rack_location, description, image_url, product_url, specs, steps,
           is_featured, is_weekly_pick, is_bestseller
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13::jsonb,$14,$15,$16)
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb,$15,$16,$17)
         RETURNING *`,
         [
           sku,
@@ -169,6 +170,7 @@ export const ProductModel = {
           payload.rack_location || "Rak A-01",
           payload.description || "",
           payload.image_url || "/hardware/cpu.svg",
+          productUrl,
           JSON.stringify(specs),
           JSON.stringify(steps),
           Boolean(payload.is_featured),
@@ -192,6 +194,7 @@ export const ProductModel = {
             rack_location: payload.rack_location || "Rak A-01",
             description: payload.description || "",
             image_url: payload.image_url || "/hardware/cpu.svg",
+            product_url: productUrl,
             specs,
             steps,
             is_featured: Boolean(payload.is_featured),
@@ -217,6 +220,7 @@ export const ProductModel = {
         rack_location: payload.rack_location || "Rak A-01",
         description: payload.description || "",
         image_url: payload.image_url || "/hardware/cpu.svg",
+        product_url: productUrl,
         specs,
         steps,
         is_featured: Boolean(payload.is_featured),
@@ -273,6 +277,10 @@ export const ProductModel = {
         rack_location: payload.rack_location ?? existing.rack_location,
         description: payload.description ?? existing.description,
         image_url: payload.image_url ?? existing.image_url,
+        product_url:
+          payload.product_url !== undefined
+            ? String(payload.product_url || "").trim()
+            : existing.product_url || "",
         specs: payload.specs ?? payload.ingredients ?? existing.specs ?? [],
         steps: payload.steps ?? existing.steps ?? [],
         is_featured:
@@ -293,9 +301,9 @@ export const ProductModel = {
         `UPDATE products SET
           sku=$1, name=$2, brand=$3, category_name=$4, price=$5, stock=$6,
           min_stock=$7, rack_location=$8, description=$9, image_url=$10,
-          specs=$11::jsonb, steps=$12::jsonb, is_featured=$13,
-          is_weekly_pick=$14, is_bestseller=$15, updated_at=now()
-         WHERE id=$16 RETURNING *`,
+          product_url=$11, specs=$12::jsonb, steps=$13::jsonb, is_featured=$14,
+          is_weekly_pick=$15, is_bestseller=$16, updated_at=now()
+         WHERE id=$17 RETURNING *`,
         [
           merged.sku,
           merged.name,
@@ -307,6 +315,7 @@ export const ProductModel = {
           merged.rack_location,
           merged.description,
           merged.image_url,
+          merged.product_url,
           JSON.stringify(merged.specs),
           JSON.stringify(merged.steps),
           merged.is_featured,
@@ -339,6 +348,9 @@ export const ProductModel = {
           }),
           ...(payload.image_url !== undefined && {
             image_url: payload.image_url,
+          }),
+          ...(payload.product_url !== undefined && {
+            product_url: String(payload.product_url || "").trim(),
           }),
           ...(payload.specs !== undefined && { specs: payload.specs }),
           ...(payload.steps !== undefined && { steps: payload.steps }),

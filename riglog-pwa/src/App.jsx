@@ -15,6 +15,11 @@ import ConfirmModal from './components/modals/ConfirmModal.jsx'
 import SplashScreen from './components/common/SplashScreen.jsx'
 import hardwareService from './services/hardwareService.js'
 import authService from './services/authService.js'
+import {
+  hydrateOfflineStore,
+  getPendingSyncCount,
+  syncPendingOfflineQueue,
+} from './services/offlineSyncService.js'
 import './App.css'
 
 function App() {
@@ -34,6 +39,54 @@ function App() {
     window.addEventListener('riglog-auth-changed', syncAuth)
     authService.verify().then((valid) => setIsAdmin(valid))
     return () => window.removeEventListener('riglog-auth-changed', syncAuth)
+  }, [])
+
+  // Hydrate IndexedDB cache & jalankan auto-sync otomatis setiap kali perangkat kembali online
+  useEffect(() => {
+    const runSync = async () => {
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        await syncPendingOfflineQueue()
+      }
+    }
+
+    hydrateOfflineStore().then(() => {
+      runSync()
+    })
+
+    const handleOnline = () => {
+      // Beri jeda singkat 800ms agar DNS/jaringan laptop stabil lalu langsung sinkronkan ke server
+      setTimeout(runSync, 800)
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') runSync()
+    }
+    const handleSynced = () => {
+      setDataVersion((v) => v + 1)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('riglog-auth-changed', runSync)
+    window.addEventListener('riglog-offline-synced', handleSynced)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    // Retry otomatis tiap 6 detik hanya jika masih ada antrean offline saat sedang online
+    const retryTimer = setInterval(() => {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.onLine &&
+        getPendingSyncCount() > 0
+      ) {
+        runSync()
+      }
+    }, 6000)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('riglog-auth-changed', runSync)
+      window.removeEventListener('riglog-offline-synced', handleSynced)
+      document.removeEventListener('visibilitychange', handleVisibility)
+      clearInterval(retryTimer)
+    }
   }, [])
 
   const bumpDataVersion = () => setDataVersion((v) => v + 1)

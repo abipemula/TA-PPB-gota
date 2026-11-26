@@ -27,6 +27,10 @@ class AuthService {
   async verify() {
     const token = getStoredAdminToken()
     if (!token) return false
+    // Saat mode offline (termasuk setelah refresh browser tanpa internet), pertahankan sesi Admin
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return true
+    }
     try {
       const res = await apiClient.get('/api/auth/verify')
       if (!res?.valid) {

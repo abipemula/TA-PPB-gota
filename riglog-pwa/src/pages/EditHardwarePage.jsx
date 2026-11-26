@@ -8,6 +8,7 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  Link2,
 } from 'lucide-react'
 import hardwareService from '../services/hardwareService'
 import uploadService from '../services/uploadService'
@@ -46,6 +47,7 @@ export default function EditHardwarePage({
     min_stock: 5,
     rack_location: 'Rak A-01',
     description: '',
+    product_url: '',
     is_featured: false,
   })
 
@@ -84,6 +86,7 @@ export default function EditHardwarePage({
             min_stock: data.min_stock ?? 5,
             rack_location: data.rack_location || 'Rak A-01',
             description: data.description || '',
+            product_url: data.product_url || '',
             is_featured: Boolean(data.is_featured),
           })
           setCurrentImageUrl(
@@ -248,6 +251,7 @@ export default function EditHardwarePage({
         min_stock: Number(formData.min_stock ?? 5),
         rack_location: formData.rack_location.trim(),
         description: formData.description.trim(),
+        product_url: (formData.product_url || '').trim(),
         image_url: finalImageUrl,
         is_featured: Boolean(formData.is_featured),
         ingredients: cleanSpecs,
@@ -489,6 +493,25 @@ export default function EditHardwarePage({
               required
             />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            <Link2 size={13} style={{ verticalAlign: 'middle', marginRight: '5px' }} />
+            Link Produk Eksternal (Shopee / Tokopedia / Custom URL)
+          </label>
+          <input
+            type="text"
+            value={formData.product_url || ''}
+            onChange={(e) =>
+              setFormData((p) => ({ ...p, product_url: e.target.value }))
+            }
+            placeholder="Contoh: https://shopee.co.id/... atau https://www.tokopedia.com/..."
+            className="form-input"
+          />
+          <span className="field-hint">
+            Opsional. Link ini akan tampil sebagai tombol ikon di samping Keranjang pada halaman detail produk (Mode Customer &amp; Admin).
+          </span>
         </div>
 
         <div className="form-group">

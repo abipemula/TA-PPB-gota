@@ -3,6 +3,7 @@ import stockLogService from '../services/stockLogService'
 
 // ---------------------------------------------------------------------------
 // useStockLogs — Custom hook untuk mengambil & mencatat mutasi stok gudang
+// Otomatis ter-update saat cache IndexedDB offline selesai hydrasi atau selesai sinkronisasi.
 // ---------------------------------------------------------------------------
 export function useStockLogs() {
   const [logs, setLogs] = useState([])
@@ -30,6 +31,20 @@ export function useStockLogs() {
 
   useEffect(() => {
     fetchLogs()
+  }, [fetchLogs])
+
+  useEffect(() => {
+    const handleSyncEvents = () => {
+      fetchLogs()
+    }
+    window.addEventListener('riglog-offline-hydrated', handleSyncEvents)
+    window.addEventListener('riglog-offline-queue-changed', handleSyncEvents)
+    window.addEventListener('riglog-offline-synced', handleSyncEvents)
+    return () => {
+      window.removeEventListener('riglog-offline-hydrated', handleSyncEvents)
+      window.removeEventListener('riglog-offline-queue-changed', handleSyncEvents)
+      window.removeEventListener('riglog-offline-synced', handleSyncEvents)
+    }
   }, [fetchLogs])
 
   return { logs, loading, error, source, refetch: fetchLogs }
